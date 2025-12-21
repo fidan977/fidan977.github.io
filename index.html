@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Анонимное сообщение</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+    textarea { width: 100%; height: 120px; padding: 10px; margin: 10px 0; }
+    button { padding: 10px 20px; background: #0088cc; color: white; border: none; cursor: pointer; }
+    button:disabled { background: #ccc; }
+  </style>
+</head>
+<body>
+  <h2>Отправить анонимное сообщение</h2>
+  <form id="anonForm">
+    <textarea name="message" placeholder="Напишите ваше сообщение..." required></textarea><br>
+    <button type="submit">Отправить</button>
+  </form>
+  <p id="status"></p>
+
+  <script>
+    // 🔑 ЗАМЕНИТЕ ЭТИ ЗНАЧЕНИЯ НА СВОИ
+    const BOT_TOKEN = '123456789:ABCdefGhIJKlmNoPQRstUVwxYZ'; // ваш токен от @BotFather
+    const CHAT_ID = '987654321'; // ваш Telegram ID
+
+    const form = document.getElementById('anonForm');
+    const status = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = form.message.value.trim();
+      if (!msg) return;
+
+      const button = form.querySelector('button');
+      button.disabled = true;
+      status.textContent = 'Отправка...';
+
+      try {
+        const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text: '📩 Анонимное сообщение:\n\n' + msg,
+            parse_mode: 'HTML'
+          })
+        });
+
+        if (resp.ok) {
+          status.textContent = '✅ Сообщение отправлено!';
+          form.reset();
+        } else {
+          status.textContent = '❌ Ошибка. Попробуйте позже.';
+        }
+      } catch (err) {
+        status.textContent = '⚠️ Не удалось отправить. Проверьте интернет.';
+        console.error(err);
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
