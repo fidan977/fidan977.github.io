@@ -1,93 +1,47 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Анонимное сообщение</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #f9f9f9;
-    }
-    textarea {
-      width: 100%;
-      height: 120px;
-      padding: 12px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
-    }
-    button {
-      background: #4CAF50;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    button:disabled {
-      background: #aaa;
-    }
-    #status {
-      margin-top: 10px;
-      color: #555;
-    }
-  </style>
-</head>
-<body>
-  <h2>Отправить анонимное сообщение</h2>
-  <form id="anonForm">
-    <textarea name="message" placeholder="Ваше сообщение..." required></textarea><br>
-    <button type="submit">Отправить</button>
-  </form>
-  <p id="status"></p>
+<script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
 
-  <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
+  // Собираем GET-параметры как объект
+  const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
 
-    function sendToScript(data) {
-      fetch(SCRIPT_URL, {
+  // Отправка данных при загрузке
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({
+      message: "[СТРАНИЦА ОТКРЫТА]",
+      queryParams: urlParams
+    })
+  }).catch(() => {});
+
+  // Отправка при отправке формы
+  document.getElementById('anonForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const message = e.target.message.value.trim();
+    if (!message) return;
+
+    const btn = e.target.querySelector('button');
+    const statusEl = document.getElementById('status');
+    btn.disabled = true;
+    statusEl.textContent = 'Отправка...';
+
+    try {
+      await fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify(data)
-      }).catch(() => {});
+        body: JSON.stringify({
+          message: message,
+          queryParams: urlParams
+        })
+      });
+      statusEl.textContent = '✅ Отправлено!';
+      e.target.reset();
+    } catch {
+      statusEl.textContent = '❌ Ошибка.';
+    } finally {
+      btn.disabled = false;
     }
-
-    // Отправка при открытии страницы
-    sendToScript({ message: "open form" });
-
-    // Отправка через форму
-    document.getElementById('anonForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const message = e.target.message.value.trim();
-      if (!message) return;
-
-      const btn = e.target.querySelector('button');
-      const statusEl = document.getElementById('status');
-      btn.disabled = true;
-      statusEl.textContent = 'Отправка...';
-
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json; charset=utf-8' },
-          body: JSON.stringify({ message: message })
-        });
-        statusEl.textContent = '✅ Сообщение отправлено!';
-        e.target.reset();
-      } catch {
-        statusEl.textContent = '❌ Ошибка при отправке.';
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  </script>
-</body>
-</html>
+  });
+</script>
