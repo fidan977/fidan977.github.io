@@ -1,62 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Анонимное сообщение</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
-    textarea { width: 100%; height: 120px; padding: 10px; margin: 10px 0; }
-    button { padding: 10px 20px; background: #0088cc; color: white; border: none; cursor: pointer; }
-    button:disabled { background: #ccc; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:disabled {
+      background: #aaa;
+    }
+    #status {
+      margin-top: 10px;
+      color: #555;
+    }
   </style>
 </head>
 <body>
   <h2>Отправить анонимное сообщение</h2>
   <form id="anonForm">
-    <textarea name="message" placeholder="Напишите ваше сообщение..." required></textarea><br>
+    <textarea name="message" placeholder="Ваше сообщение..." required></textarea><br>
     <button type="submit">Отправить</button>
   </form>
   <p id="status"></p>
 
   <script>
-    // 🔑 ЗАМЕНИТЕ ЭТИ ЗНАЧЕНИЯ НА СВОИ
-    const BOT_TOKEN = '123456789:ABCdefGhIJKlmNoPQRstUVwxYZ'; // ваш токен от @BotFather
-    const CHAT_ID = '987654321'; // ваш Telegram ID
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
 
-    const form = document.getElementById('anonForm');
-    const status = document.getElementById('status');
-
-    form.addEventListener('submit', async (e) => {
+    document.getElementById('anonForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const msg = form.message.value.trim();
-      if (!msg) return;
+      const message = e.target.message.value.trim();
+      if (!message) return;
 
-      const button = form.querySelector('button');
-      button.disabled = true;
-      status.textContent = 'Отправка...';
+      const btn = e.target.querySelector('button');
+      const statusEl = document.getElementById('status');
+      btn.disabled = true;
+      statusEl.textContent = 'Отправка...';
 
       try {
-        const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        // Отправляем данные как JSON
+        const response = await fetch(SCRIPT_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: CHAT_ID,
-            text: '📩 Анонимное сообщение:\n\n' + msg,
-            parse_mode: 'HTML'
-          })
+          mode: 'no-cors', // Обход CORS (т.к. Google Apps Script не всегда возвращает правильные заголовки)
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8'
+          },
+          body: JSON.stringify({ message: message })
         });
 
-        if (resp.ok) {
-          status.textContent = '✅ Сообщение отправлено!';
-          form.reset();
-        } else {
-          status.textContent = '❌ Ошибка. Попробуйте позже.';
-        }
+        // При no-cors fetch не даёт деталей ответа, но если не было ошибки — считаем успехом
+        statusEl.textContent = '✅ Сообщение отправлено!';
+        e.target.reset();
       } catch (err) {
-        status.textContent = '⚠️ Не удалось отправить. Проверьте интернет.';
+        statusEl.textContent = '❌ Ошибка при отправке.';
         console.error(err);
       } finally {
-        button.disabled = false;
+        btn.disabled = false;
       }
     });
   </script>
