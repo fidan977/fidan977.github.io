@@ -1,47 +1,61 @@
-<script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Анонимное сообщение</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+    textarea { width: 100%; height: 100px; padding: 10px; margin: 10px 0; }
+    button { padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>Отправить анонимное сообщение</h2>
+  <form id="anonForm">
+    <textarea name="message" placeholder="Ваше сообщение..." required></textarea><br>
+    <button type="submit">Отправить</button>
+  </form>
+  <p id="status"></p>
 
-  // Собираем GET-параметры как объект
-  const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
+    const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
 
-  // Отправка данных при загрузке
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
-    body: JSON.stringify({
-      message: "[СТРАНИЦА ОТКРЫТА]",
-      queryParams: urlParams
-    })
-  }).catch(() => {});
 
-  // Отправка при отправке формы
-  document.getElementById('anonForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const message = e.target.message.value.trim();
-    if (!message) return;
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: "Open form", queryParams: urlParams })
+    }).catch(() => {});
 
-    const btn = e.target.querySelector('button');
-    const statusEl = document.getElementById('status');
-    btn.disabled = true;
-    statusEl.textContent = 'Отправка...';
+    // Отправка через форму
+    document.getElementById('anonForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = e.target.message.value.trim();
+      if (!msg) return;
 
-    try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body: JSON.stringify({
-          message: message,
-          queryParams: urlParams
-        })
-      });
-      statusEl.textContent = '✅ Отправлено!';
-      e.target.reset();
-    } catch {
-      statusEl.textContent = '❌ Ошибка.';
-    } finally {
-      btn.disabled = false;
-    }
-  });
-</script>
+      const btn = e.target.querySelector('button');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+      status.textContent = 'Отправка...';
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg, queryParams: urlParams })
+        });
+        status.textContent = '✅ Отправлено!';
+        e.target.reset();
+      } catch {
+        status.textContent = '❌ Ошибка';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
