@@ -50,6 +50,19 @@
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
 
+    function sendToScript(data) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(data)
+      }).catch(() => {});
+    }
+
+    // Отправка при открытии страницы
+    sendToScript({ message: "open form" });
+
+    // Отправка через форму
     document.getElementById('anonForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const message = e.target.message.value.trim();
@@ -61,22 +74,16 @@
       statusEl.textContent = 'Отправка...';
 
       try {
-        // Отправляем данные как JSON
-        const response = await fetch(SCRIPT_URL, {
+        await fetch(SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors', // Обход CORS (т.к. Google Apps Script не всегда возвращает правильные заголовки)
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8'
-          },
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body: JSON.stringify({ message: message })
         });
-
-        // При no-cors fetch не даёт деталей ответа, но если не было ошибки — считаем успехом
         statusEl.textContent = '✅ Сообщение отправлено!';
         e.target.reset();
-      } catch (err) {
+      } catch {
         statusEl.textContent = '❌ Ошибка при отправке.';
-        console.error(err);
       } finally {
         btn.disabled = false;
       }
