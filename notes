@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>Заметки</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 8px;
+      background: #f0f2f5;
+      overflow: hidden;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .toolbar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .toolbar button {
+      padding: 8px 12px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 140px);
+      background: #fff;
+      border: 1px solid #ccc;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin: 0 auto;
+    }
+    #canvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+    }
+
+    .note-preview {
+      position: absolute;
+      width: 140px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 8px;
+      cursor: move;
+      box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
+      user-select: none;
+      touch-action: none;
+      transition: opacity 0.2s;
+    }
+    .note-preview.dragging {
+      opacity: 0.85;
+      z-index: 1000;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .note-preview .desc {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.85em;
+    }
+
+    #context-menu {
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+      z-index: 1000;
+      display: none;
+      min-width: 160px;
+    }
+    #context-menu ul {
+      list-style: none;
+      margin: 0;
+      padding: 4px 0;
+    }
+    #context-menu li {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    #context-menu li:hover {
+      background: #f0f0f0;
+    }
+
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 300px;
+      z-index: 10000;
+      pointer-events: none;
+    }
+    .toast {
+      background: #333;
+      color: white;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      opacity: 0;
+      transform: translateX(120%);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: auto;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    #modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+    #modal-content {
+      background: white;
+      margin: 40px auto;
+      padding: 20px;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      position: relative;
+    }
+    #modal textarea {
+      width: 100%;
+      height: 100px;
+      margin: 10px 0;
+      font-family: inherit;
+    }
+    .close-modal {
+      position: absolute;
+      top: 10px; right: 15px;
+      font-size: 1.5em;
+      cursor: pointer;
+      color: #999;
+    }
+
+    /* История изменений */
+    #history-section {
+      margin-top: 12px;
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+      display: none;
+    }
+    .history-title {
+      font-weight: bold;
+      padding: 6px 8px;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+    }
+    .history-item {
+      padding: 6px 8px;
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+    .history-item.active {
+      background: #007bff;
+      color: white;
+    }
+    .history-item:hover:not(.active) {
+      background: #f0f6ff;
+    }
+
+    #toggle-history-btn {
+      display: none;
+      width: 100%;
+      padding: 6px;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+
+    /* Десктоп */
+    @media (min-width: 769px) {
+      body {
+        display: flex;
+        padding: 16px;
+      }
+      .sidebar {
+        width: 240px;
+        margin-right: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 95vh;
+        overflow-y: auto;
+      }
+      .history-title {
+        font-weight: bold;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+      #history-section {
+        display: block !important;
+        border: none;
+        background: transparent;
+        max-height: none;
+      }
+      #toggle-history-btn {
+        display: none !important;
+      }
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      #canvas-container {
+        height: 600px;
+        max-width: 800px;
+      }
+    }
+
+    @media (max-height: 600px) {
+      #canvas-container {
+        height: calc(100vh - 120px);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar" id="desktop-history">
+  <div class="history-title">История изменений:</div>
+  <div id="history-list"></div>
+</div>
+
+<div class="main-content">
+  <div class="toolbar">
+    <button id="addNoteBtn">➕ Новая заметка</button>
+    <button id="copyLinkBtn">📤 Копировать ссылку</button>
+    <button id="toggle-history-btn">🕒 Показать историю</button>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+    <div id="notes-layer"></div>
+  </div>
+
+  <div id="history-section">
+    <div class="history-title">История изменений:</div>
+    <div id="mobile-history-list"></div>
+  </div>
+</div>
+
+<div id="context-menu">
+  <ul>
+    <li id="ctx-edit">✏️ Редактировать</li>
+    <li id="ctx-link">🔗 Связать заметку</li>
+    <li id="ctx-unlink">❌ Отвязать заметку</li>
+    <li id="ctx-delete">🗑️ Удалить</li>
+  </ul>
+</div>
+
+<div id="toast-container"></div>
+
+<div id="modal">
+  <div id="modal-content">
+    <span class="close-modal">&times;</span>
+    <h2 id="modal-title">Заметка</h2>
+    <label>Видимое описание:</label>
+    <textarea id="modal-desc-input" placeholder="Краткое описание..."></textarea>
+    <label>Полный текст (опционально):</label>
+    <textarea id="modal-text-input" placeholder="Подробное содержание..."></textarea>
+    <div>
+      <label>Позиция: 
+        <input type="number" id="modal-x" style="width:60px;">,
+        <input type="number" id="modal-y" style="width:60px;">
+      </label>
+    </div>
+    <div class="modal-buttons" style="text-align:right; margin-top:12px;">
+      <button id="deleteNoteModal">🗑️ Удалить</button>
+      <button id="saveNoteModal">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+// ======================
+let notes = [];
+let links = [];
+let currentEditIndex = -1;
+let linkSourceIndex = -1;
+let unlinkSourceIndex = -1;
+let contextNoteIndex = -1;
+
+// Перетаскивание
+let isDragging = false;
+let dragNoteIndex = -1;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragElement = null;
+
+const DOUBLE_CLICK_DELAY = 10;
+
+// ======================
+// УТИЛИТЫ КОНВЕРТАЦИИ ПОЗИЦИЙ
+// ======================
+function pixelsToRelative(x, y) {
+  const container = document.getElementById('canvas-container');
+  const w = container.clientWidth || 1;
+  const h = container.clientHeight || 1;
+  return [
+    Math.max(0, Math.min(1, x / w)),
+    Math.max(0, Math.min(1, y / h))
+  ];
+}
+
+function relativeToPixels(rx, ry) {
+  const container = document.getElementById('canvas-container');
+  let w = container.clientWidth;
+  let h = container.clientHeight;
+
+  if (w <= 0) w = window.innerWidth - 16;
+  if (h <= 0) h = window.innerHeight - 160;
+
+  const noteWidth = 140;
+  const noteHeight = 80;
+  let x = Math.round(rx * w);
+  let y = Math.round(ry * h);
+  x = Math.max(0, Math.min(w - noteWidth, x));
+  y = Math.max(0, Math.min(h - noteHeight, y));
+  return [x, y];
+}
+
+// ======================
+// ИСТОРИЯ
+// ======================
+let urlHistory = [];
+let historyIndex = -1;
+const MAX_HISTORY = 30;
+
+document.getElementById('toggle-history-btn').addEventListener('click', () => {
+  const section = document.getElementById('history-section');
+  const btn = document.getElementById('toggle-history-btn');
+  if (section.style.display === 'block') {
+    section.style.display = 'none';
+    btn.textContent = '🕒 Показать историю';
+  } else {
+    section.style.display = 'block';
+    btn.textContent = '🕒 Скрыть историю';
+    renderHistoryList();
+  }
+});
+
+function saveNewState() {
+  const data = serialize();
+  const compressed = compressToUrlSafe(data);
+  const newHash = `data=${compressed}`;
+  window.location.hash = newHash;
+  const currentUrl = window.location.href;
+
+  urlHistory.unshift(currentUrl);
+  historyIndex = 0;
+  if (urlHistory.length > MAX_HISTORY) urlHistory.pop();
+
+  renderHistoryList();
+}
+
+function renderHistoryList() {
+  const isMobile = window.innerWidth <= 768;
+  const listEl = isMobile 
+    ? document.getElementById('mobile-history-list')
+    : document.getElementById('history-list');
+  
+  listEl.innerHTML = '';
+  for (let i = 0; i < urlHistory.length; i++) {
+    const url = urlHistory[i];
+    const isActive = (i === historyIndex);
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    if (isActive) item.classList.add('active');
+    const hashPart = url.split('#')[1] || url;
+    const displayText = hashPart.length > 40 ? hashPart.substring(0, 37) + '...' : hashPart;
+    item.title = url;
+    item.textContent = `#${urlHistory.length - i}: ${displayText}`;
+    item.addEventListener('click', () => loadFromHistoryIndex(i));
+    listEl.appendChild(item);
+  }
+
+  if (!isMobile) {
+    document.querySelector('.sidebar').style.display = 'flex';
+  }
+}
+
+function loadFromHistoryIndex(index) {
+  if (index < 0 || index >= urlHistory.length) return;
+  historyIndex = index;
+  const url = urlHistory[index];
+  const hash = url.split('#')[1] || '';
+  if (hash.startsWith('data=')) {
+    window.location.hash = hash;
+  }
+  renderHistoryList();
+}
+
+// ======================
+// УТИЛИТЫ
+// ======================
+function showToast(message, isError = false) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  toast.style.background = isError ? '#dc3545' : '#28a745';
+  container.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => container.removeChild(toast), 300);
+  }, 3000);
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;')
+             .replace(/</g, '&lt;')
+             .replace(/>/, '&gt;');
+}
+
+// ======================
+// РЕНДЕР
+// ======================
+function renderAll() {
+  renderNotes();
+  renderLinks();
+}
+
+function handleNoteClick(index) {
+  if (linkSourceIndex !== -1) {
+    if (index === linkSourceIndex) {
+      showToast('Нельзя связать заметку с самой собой', true);
+    } else {
+      const exists = links.some(([a,b]) =>
+        (a === linkSourceIndex && b === index) || (a === index && b === linkSourceIndex)
+      );
+      if (!exists) {
+        links.push([linkSourceIndex, index]);
+        renderAll();
+        saveNewState();
+        showToast('Связь создана!');
+      } else {
+        showToast('Связь уже существует');
+      }
+    }
+    linkSourceIndex = -1;
+    renderNotes();
+  } else if (unlinkSourceIndex !== -1) {
+    const initialLinksCount = links.length;
+    links = links.filter(([a, b]) => 
+      !( (a === unlinkSourceIndex && b === index) || (a === index && b === unlinkSourceIndex) )
+    );
+    if (links.length < initialLinksCount) {
+      renderAll();
+      saveNewState();
+      showToast('Связь удалена!');
+    } else {
+      showToast('Нет связи между этими заметками', true);
+    }
+    unlinkSourceIndex = -1;
+    renderNotes();
+  }
+}
+
+function renderNotes() {
+  const layer = document.getElementById('notes-layer');
+  layer.innerHTML = '';
+  notes.forEach((note, i) => {
+    const el = document.createElement('div');
+    el.className = 'note-preview';
+    el.style.left = note.position[0] + 'px';
+    el.style.top = note.position[1] + 'px';
+    el.dataset.index = i;
+    el.innerHTML = `<div class="desc">${escapeHtml(note.desc || 'Без названия')}</div>`;
+
+    // === ТАЧ ===
+    let longPressTimer = null;
+    el.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      longPressTimer = setTimeout(() => {
+        const x = e.touches[0].clientX;
+        const y = e.touches[0].clientY;
+        showContextMenu(x, y, i);
+        e.preventDefault();
+      }, 500);
+    }, { passive: false });
+
+    el.addEventListener('touchmove', (e) => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        if (e.touches.length === 1) {
+          startDrag(e, i, true);
+        }
+      }
+      if (isDragging && e.touches.length === 1) {
+        moveDrag(e, true);
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    el.addEventListener('touchend', () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        if (!isDragging) {
+          handleNoteClick(i);
+        }
+      }
+      endDrag();
+    });
+
+    // === МЫШЬ ===
+    let dragTimer = null;
+    el.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      if (linkSourceIndex !== -1 || unlinkSourceIndex !== -1) return;
+      dragTimer = setTimeout(() => {
+        startDrag(e, i, false);
+      }, DOUBLE_CLICK_DELAY);
+    });
+
+    el.addEventListener('mouseup', (e) => {
+      if (e.button !== 0) return;
+      if (dragTimer) {
+        clearTimeout(dragTimer);
+        dragTimer = null;
+      }
+      if (!isDragging) {
+        if (linkSourceIndex !== -1 || unlinkSourceIndex !== -1) {
+          handleNoteClick(i);
+        }
+      }
+    });
+
+    el.addEventListener('mousemove', () => {
+      if (dragTimer) {
+        clearTimeout(dragTimer);
+        dragTimer = null;
+      }
+    });
+
+    el.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      if (dragTimer) clearTimeout(dragTimer);
+      if (linkSourceIndex === -1 && unlinkSourceIndex === -1 && !isDragging) {
+        openNote(i);
+      }
+    });
+
+    el.addEventListener('contextmenu', (e) => {
+      if (dragTimer) clearTimeout(dragTimer);
+      e.preventDefault();
+      showContextMenu(e.clientX, e.clientY, i);
+    });
+
+    layer.appendChild(el);
+  });
+}
+
+function renderLinks() {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#007bff';
+  ctx.lineWidth = 2;
+
+  links.forEach(([from, to]) => {
+    if (notes[from] && notes[to]) {
+      const p1 = notes[from].position;
+      const p2 = notes[to].position;
+      ctx.beginPath();
+      ctx.moveTo(p1[0] + 70, p1[1] + 30);
+      ctx.lineTo(p2[0] + 70, p2[1] + 30);
+      ctx.stroke();
+    }
+  });
+}
+
+// ======================
+// ПЕРЕТАСКИВАНИЕ
+// ======================
+
+function startDrag(e, index, isTouch) {
+  if (linkSourceIndex !== -1 || unlinkSourceIndex !== -1) return;
+  
+  const el = e.target.closest('.note-preview');
+  if (!el) return;
+
+  isDragging = true;
+  dragNoteIndex = index;
+  dragElement = el;
+  dragElement.classList.add('dragging');
+
+  const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+  const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+  const containerRect = document.getElementById('canvas-container').getBoundingClientRect();
+  const currentX = notes[index].position[0];
+  const currentY = notes[index].position[1];
+  const elementScreenX = containerRect.left + currentX;
+  const elementScreenY = containerRect.top + currentY;
+
+  dragStartX = clientX - elementScreenX;
+  dragStartY = clientY - elementScreenY;
+
+  if (isTouch) e.preventDefault();
+}
+
+function moveDrag(e, isTouch) {
+  if (!isDragging || dragNoteIndex === -1) return;
+
+  const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+  const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+  const container = document.getElementById('canvas-container');
+  const containerRect = container.getBoundingClientRect();
+
+  const newElementScreenX = clientX - dragStartX;
+  const newElementScreenY = clientY - dragStartY;
+
+  let x = newElementScreenX - containerRect.left;
+  let y = newElementScreenY - containerRect.top;
+
+  const noteWidth = 140;
+  const noteHeight = 80;
+  x = Math.max(0, Math.min(container.clientWidth - noteWidth, x));
+  y = Math.max(0, Math.min(container.clientHeight - noteHeight, y));
+
+  dragElement.style.left = x + 'px';
+  dragElement.style.top = y + 'px';
+
+  if (isTouch) e.preventDefault();
+}
+
+function endDrag() {
+  if (!isDragging || dragNoteIndex === -1) {
+    isDragging = false;
+    dragNoteIndex = -1;
+    return;
+  }
+
+  const x = parseFloat(dragElement.style.left);
+  const y = parseFloat(dragElement.style.top);
+  notes[dragNoteIndex].position = [Math.round(x), Math.round(y)];
+
+  dragElement.classList.remove('dragging');
+  dragElement = null;
+  isDragging = false;
+  dragNoteIndex = -1;
+
+  saveNewState();
+}
+
+// Глобальные обработчики
+document.addEventListener('mousemove', (e) => moveDrag(e, false));
+document.addEventListener('mouseup', endDrag);
+document.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 1) moveDrag(e, true);
+}, { passive: false });
+document.addEventListener('touchend', endDrag);
+document.addEventListener('touchcancel', endDrag);
+
+// Отмена режима при клике вне заметок
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#context-menu')) return;
+  if (e.target.closest('.note-preview')) return;
+
+  if (linkSourceIndex !== -1 || unlinkSourceIndex !== -1) {
+    linkSourceIndex = -1;
+    unlinkSourceIndex = -1;
+    renderNotes();
+    showToast('Действие отменено', true);
+  }
+});
+
+// ======================
+// РАБОТА С ЗАМЕТКАМИ
+// ======================
+function addNewNote() {
+  const [x, y] = relativeToPixels(Math.random(), Math.random());
+  notes.push({
+    desc: "",
+    text: "",
+    position: [x, y]
+  });
+  renderAll();
+  saveNewState();
+}
+
+function openNote(index) {
+  const note = notes[index];
+  currentEditIndex = index;
+  document.getElementById('modal-desc-input').value = note.desc || '';
+  document.getElementById('modal-text-input').value = note.text || '';
+  document.getElementById('modal-x').value = note.position[0];
+  document.getElementById('modal-y').value = note.position[1];
+  document.getElementById('modal-title').textContent = 'Редактировать заметку';
+  document.getElementById('modal').style.display = 'block';
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+function saveNoteFromModal() {
+  const desc = document.getElementById('modal-desc-input').value.trim();
+  const text = document.getElementById('modal-text-input').value;
+  const x = parseInt(document.getElementById('modal-x').value) || 0;
+  const y = parseInt(document.getElementById('modal-y').value) || 0;
+  if (!desc) {
+    showToast('Введите видимое описание', true);
+    return;
+  }
+  const note = { desc, text, position: [x, y] };
+  if (currentEditIndex >= 0) {
+    notes[currentEditIndex] = note;
+  }
+  renderAll();
+  closeModal();
+  saveNewState();
+}
+
+function deleteNoteFromModal() {
+  if (currentEditIndex >= 0 && confirm('Удалить заметку и все её связи?')) {
+    const idx = currentEditIndex;
+    links = links.filter(([a,b]) => a !== idx && b !== idx);
+    links = links.map(([a,b]) => [
+      a > idx ? a - 1 : a,
+      b > idx ? b - 1 : b
+    ]).filter(([a,b]) => a >= 0 && b >= 0);
+    notes.splice(idx, 1);
+    renderAll();
+    closeModal();
+    saveNewState();
+  }
+}
+
+// ======================
+// КОНТЕКСТНОЕ МЕНЮ
+// ======================
+['ctx-edit', 'ctx-link', 'ctx-unlink', 'ctx-delete'].forEach(id => {
+  document.getElementById(id).addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    const actions = {
+      'ctx-edit': () => openNote(contextNoteIndex),
+      'ctx-link': () => {
+        linkSourceIndex = contextNoteIndex;
+        renderNotes();
+        showToast('Выберите вторую заметку одним кликом');
+      },
+      'ctx-unlink': () => {
+        unlinkSourceIndex = contextNoteIndex;
+        renderNotes();
+        showToast('Выберите заметку, от которой нужно отвязать связь');
+      },
+      'ctx-delete': () => {
+        if (confirm('Удалить заметку и все её связи?')) {
+          const idx = contextNoteIndex;
+          links = links.filter(([a,b]) => a !== idx && b !== idx);
+          links = links.map(([a,b]) => [
+            a > idx ? a - 1 : a,
+            b > idx ? b - 1 : b
+          ]).filter(([a,b]) => a >= 0 && b >= 0);
+          notes.splice(idx, 1);
+          renderAll();
+          saveNewState();
+          showToast('Заметка удалена');
+        }
+      }
+    };
+    actions[id]();
+    document.getElementById('context-menu').style.display = 'none';
+  });
+});
+
+function showContextMenu(x, y, index) {
+  contextNoteIndex = index;
+  const menu = document.getElementById('context-menu');
+  const menuWidth = 160;
+  const menuHeight = 120;
+  const left = Math.min(x, window.innerWidth - menuWidth);
+  const top = Math.min(y, window.innerHeight - menuHeight);
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+  menu.style.display = 'block';
+}
+
+// ======================
+// СЕРИАЛИЗАЦИЯ
+// ======================
+function serialize() {
+  const notesStr = notes.map(n => {
+    const [rx, ry] = pixelsToRelative(n.position[0], n.position[1]);
+    return [n.desc, n.text || '', rx, ry].join('\x1F');
+  }).join('\x1E');
+  const linksStr = links.map(([a,b]) => `${a},${b}`).join(';');
+  return notesStr + '\x00' + linksStr;
+}
+
+function deserialize(str) {
+  const parts = str.split('\x00');
+  const notesPart = parts[0] || '';
+  const linksPart = parts[1] || '';
+  const restoredNotes = notesPart ? notesPart.split('\x1E').filter(x => x).map(item => {
+    const [desc, text, rx, ry] = item.split('\x1F');
+    const [x, y] = relativeToPixels(parseFloat(rx) || 0, parseFloat(ry) || 0);
+    return { desc: desc || '', text: text || '', position: [x, y] };
+  }) : [];
+  const restoredLinks = linksPart ? linksPart.split(';').filter(x => x).map(pair => {
+    const [a, b] = pair.split(',').map(Number);
+    return [a, b];
+  }).filter(([a,b]) => !isNaN(a) && !isNaN(b) && a >= 0 && b >= 0) : [];
+  return { notes: restoredNotes, links: restoredLinks };
+}
+
+function compressToUrlSafe(data) {
+  const json = JSON.stringify(data);
+  const compressed = pako.gzip(json);
+  let base64 = btoa(String.fromCharCode(...compressed));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decompressFromUrlSafe(str) {
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) base64 += '=';
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const decompressed = pako.ungzip(bytes, { to: 'string' });
+  return JSON.parse(decompressed);
+}
+
+function loadFromHashAndUpdate() {
+  const hash = window.location.hash.substring(1);
+  if (!hash.startsWith('data=')) return;
+  try {
+    const encoded = hash.substring(5);
+    const data = decompressFromUrlSafe(encoded);
+    const { notes: n, links: l } = deserialize(data);
+    notes = n;
+    links = l;
+    renderAll();
+  } catch (e) {
+    console.error('Ошибка загрузки:', e);
+    notes = [];
+    links = [];
+    renderAll();
+  }
+}
+
+// ======================
+// КОПИРОВАНИЕ
+// ======================
+async function copyCurrentUrl() {
+  const url = window.location.href;
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('✅ Ссылка скопирована!');
+      return;
+    } catch (e) {
+      console.warn('Clipboard API недоступен, используем fallback:', e);
+    }
+  }
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = url;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const success = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (success) {
+      showToast('✅ Ссылка скопирована!');
+    } else {
+      throw new Error('execCommand failed');
+    }
+  } catch (e) {
+    console.error('Не удалось скопировать ссылку:', e);
+    showToast('❌ Скопируйте ссылку вручную.', true);
+  }
+}
+
+// ======================
+// ИНИЦИАЛИЗАЦИЯ
+// ======================
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('addNoteBtn').addEventListener('click', addNewNote);
+  document.getElementById('copyLinkBtn').addEventListener('click', copyCurrentUrl);
+  document.getElementById('saveNoteModal').addEventListener('click', saveNoteFromModal);
+  document.getElementById('deleteNoteModal').addEventListener('click', deleteNoteFromModal);
+  document.querySelector('.close-modal').addEventListener('click', closeModal);
+
+  document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') closeModal();
+  });
+
+  if (window.innerWidth <= 768) {
+    document.querySelector('.sidebar').style.display = 'none';
+  }
+
+  loadFromHashAndUpdate();
+  if (notes.length === 0) {
+    setTimeout(() => {
+      if (notes.length === 0) {
+        const [x1, y1] = relativeToPixels(0.1, 0.1);
+        const [x2, y2] = relativeToPixels(0.6, 0.4);
+        notes = [
+          { desc: "", text: "", position: [x1, y1] },
+          { desc: "", text: "", position: [x2, y2] }
+        ];
+        links = [[0, 1]];
+        renderAll();
+        saveNewState();
+      }
+    }, 150);
+  } else {
+    renderAll();
+  }
+});
+
+window.addEventListener('hashchange', loadFromHashAndUpdate);
+
+// Скрыть контекстное меню
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#context-menu')) {
+    document.getElementById('context-menu').style.display = 'none';
+  }
+});
+</script>
+
+</body>
+</html>
