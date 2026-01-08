@@ -91,68 +91,18 @@
 
   <div id="status">Ожидание завершения Таймера 1...</div>
 
+  <audio id="beep" src="sounds/soft-beep.wav" preload="auto"></audio>
+
   <script>
-    // === Генерация мягкого звука через Web Audio API (без внешних файлов) ===
-    let audioContext = null;
-    let isAudioUnlocked = false;
-
-    function createBeepSound(volume = 0.5) {
-      if (!audioContext) {
-        // Инициализируем контекст при первом вызове (после пользовательского клика)
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      const duration = 0.2; // секунды
-      const frequency = 800; // Гц
-      const sampleRate = audioContext.sampleRate;
-      const samples = Math.floor(duration * sampleRate);
-      const buffer = audioContext.createBuffer(1, samples, sampleRate);
-      const data = buffer.getChannelData(0);
-
-      // Создаём мягкий "синусоидальный" звук с затуханием
-      for (let i = 0; i < samples; i++) {
-        const t = i / sampleRate;
-        const envelope = Math.exp(-3 * t); // плавное затухание
-        data[i] = envelope * Math.sin(2 * Math.PI * frequency * t) * volume;
-      }
-
-      const source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContext.destination);
-      source.start();
-    }
-
-    // === Разблокировка аудио при первом клике ===
-    function unlockAudio() {
-      if (isAudioUnlocked) return;
-      try {
-        // Пробуем создать и немедленно остановить звук
-        createBeepSound(0.01); // почти бесшумно
-        isAudioUnlocked = true;
-      } catch (e) {
-        console.warn("Не удалось разблокировать аудио:", e);
-      }
-    }
-
-    // Любой клик разблокирует аудио
-    document.addEventListener('click', unlockAudio, { once: true });
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-
     // === Парсинг параметров из хеша ===
     function parseHashParams() {
-      const hash = window.location.hash.substring(1);
-      const params = {};
-      if (hash) {
-        hash.split('&').forEach(pair => {
-          const [key, val] = pair.split('=');
-          if (key && val) params[key] = parseInt(val, 10);
-        });
-      }
+      const hash = window.location.hash.substring(1); // убираем '#'
+      const params = new URLSearchParams(hash.replace(/&/g, '&').replace(/=/g, '=')); // стандартный парсинг
 
-      let t1 = params.t1 || 600;
-      let t2 = params.t2 || 300;
+      let t1 = parseInt(params.get('t1'), 10) || 600; // 10 мин по умолчанию
+      let t2 = parseInt(params.get('t2'), 10) || 300; // 5 мин по умолчанию
 
-      // Ограничения
+      // Ограничения (как в PHP)
       t1 = Math.max(1, Math.min(86400, t1));
       t2 = Math.max(1, Math.min(3600, t2));
 
@@ -161,45 +111,44 @@
 
     const { t1: DURATION_T1, t2: DURATION_T2 } = parseHashParams();
 
-    // === Переменные таймеров ===
+    // === Остальной код таймера (без изменений, только замена PHP-значений) ===
     let t1EndTime = Date.now() + DURATION_T1 * 1000;
     let t2EndTime = null;
     let t2Active = false;
     let t2Interval = null;
 
-    // === Элементы DOM ===
     const t1El = document.getElementById('t1');
     const t2El = document.getElementById('t2');
     const stopBtn = document.getElementById('stopBtn');
     const restartBtn = document.getElementById('restartBtn');
     const testSoundBtn = document.getElementById('testSoundBtn');
     const statusEl = document.getElementById('status');
+    const beep = document.getElementById('beep');
     const volumeSlider = document.getElementById('volumeSlider');
     const volumeValue = document.getElementById('volumeValue');
 
-    // === Громкость из localStorage ===
+    // Инициализация громкости
     let volume = localStorage.getItem('timer-volume') || 50;
     volume = Math.min(100, Math.max(0, parseInt(volume, 10) || 50));
     volumeSlider.value = volume;
     volumeValue.textContent = volume + '%';
+    beep.volume = volume / 100;
 
     volumeSlider.addEventListener('input', () => {
       volume = parseInt(volumeSlider.value, 10);
       volumeValue.textContent = volume + '%';
+      beep.volume = volume / 100;
       localStorage.setItem('timer-volume', volume);
     });
 
-    // === Проверка звука ===
     testSoundBtn.addEventListener('click', () => {
-      unlockAudio();
-      if (isAudioUnlocked) {
-        createBeepSound(volume / 100);
-      } else {
-        alert('⚠️ Браузер блокирует звук. Попробуйте ещё раз или кликните в другом месте.');
-      }
+      beep.currentTime = 0;
+      const promise = beep.play();
+      if (promise) promise.catch(() => {
+        alert('⚠️ Звук заблокирован.\nСделайте клик на странице и повторите.');
+      });
     });
 
-    // === Вспомогательные функции ===
     function formatTime(sec) {
       const h = Math.floor(sec / 3600);
       const m = Math.floor((sec % 3600) / 60);
@@ -238,10 +187,8 @@
       t2El.textContent = formatTime(remaining);
 
       if (remaining <= 0) {
-        // Воспроизводим звук, если аудио разблокировано
-        if (isAudioUnlocked) {
-          createBeepSound(volume / 100);
-        }
+        beep.currentTime = 0;
+        beep.play().catch(() => {});
         t2EndTime = Date.now() + DURATION_T2 * 1000;
         t2El.textContent = formatTime(DURATION_T2);
       }
@@ -263,11 +210,12 @@
       }
     }
 
-    // === Запуск ===
     setInterval(updateT1, 200);
+
     restartBtn.addEventListener('click', restartT1);
     stopBtn.addEventListener('click', stopT2Manually);
 
+    // Инициализация отображения
     t1El.textContent = formatTime(DURATION_T1);
     t2El.textContent = formatTime(DURATION_T2);
   </script>
