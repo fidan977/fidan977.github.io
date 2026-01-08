@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Точный таймер с фоновой поддержкой</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f8fafc;
+      margin: 0;
+    }
+    .box {
+      margin: 20px auto;
+      max-width: 540px;
+      padding: 22px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.07);
+    }
+    .timer {
+      font-size: 2.8em;
+      font-family: monospace;
+      margin: 15px 0;
+      color: #1a202c;
+    }
+    button {
+      padding: 10px 16px;
+      font-size: 1em;
+      margin: 6px 4px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-primary { background: #48bb78; color: white; }
+    .btn-info { background: #3182ce; color: white; }
+    .btn-sound { background: #ed8936; color: white; }
+    button:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+    }
+    #status {
+      margin-top: 18px;
+      font-weight: 600;
+      color: #2d3748;
+      min-height: 1.4em;
+    }
+    .volume-control {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .volume-control input {
+      width: 160px;
+    }
+    h1 {
+      color: #1a202c;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔁 Точный таймер (фон поддерживается)</h1>
+
+  <div class="box">
+    <div>Таймер 1 (бесконечный)</div>
+    <div id="t1" class="timer">00:00</div>
+    <button id="restartBtn" class="btn-info">🔄 Перезапустить Таймер 1</button>
+  </div>
+
+  <div class="box">
+    <div>Таймер 2 (цикличный)</div>
+    <div id="t2" class="timer">00:00</div>
+    <button id="stopBtn" class="btn-primary" disabled>⏹ Остановить Таймер 2</button>
+  </div>
+
+  <div class="box">
+    <div class="volume-control">
+      <span>🔈 Громкость:</span>
+      <input type="range" id="volumeSlider" min="0" max="100" value="50">
+      <span id="volumeValue">50%</span>
+      <button id="testSoundBtn" class="btn-sound">🔊 Проверить звук</button>
+    </div>
+  </div>
+
+  <div id="status">Ожидание завершения Таймера 1...</div>
+
+  <audio id="beep" src="sounds/soft-beep.wav" preload="auto"></audio>
+
+  <script>
+    // === Парсинг параметров из хеша ===
+    function parseHashParams() {
+      const hash = window.location.hash.substring(1); // убираем '#'
+      const params = new URLSearchParams(hash.replace(/&/g, '&').replace(/=/g, '=')); // стандартный парсинг
+
+      let t1 = parseInt(params.get('t1'), 10) || 600; // 10 мин по умолчанию
+      let t2 = parseInt(params.get('t2'), 10) || 300; // 5 мин по умолчанию
+
+      // Ограничения (как в PHP)
+      t1 = Math.max(1, Math.min(86400, t1));
+      t2 = Math.max(1, Math.min(3600, t2));
+
+      return { t1, t2 };
+    }
+
+    const { t1: DURATION_T1, t2: DURATION_T2 } = parseHashParams();
+
+    // === Остальной код таймера (без изменений, только замена PHP-значений) ===
+    let t1EndTime = Date.now() + DURATION_T1 * 1000;
+    let t2EndTime = null;
+    let t2Active = false;
+    let t2Interval = null;
+
+    const t1El = document.getElementById('t1');
+    const t2El = document.getElementById('t2');
+    const stopBtn = document.getElementById('stopBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const testSoundBtn = document.getElementById('testSoundBtn');
+    const statusEl = document.getElementById('status');
+    const beep = document.getElementById('beep');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeValue = document.getElementById('volumeValue');
+
+    // Инициализация громкости
+    let volume = localStorage.getItem('timer-volume') || 50;
+    volume = Math.min(100, Math.max(0, parseInt(volume, 10) || 50));
+    volumeSlider.value = volume;
+    volumeValue.textContent = volume + '%';
+    beep.volume = volume / 100;
+
+    volumeSlider.addEventListener('input', () => {
+      volume = parseInt(volumeSlider.value, 10);
+      volumeValue.textContent = volume + '%';
+      beep.volume = volume / 100;
+      localStorage.setItem('timer-volume', volume);
+    });
+
+    testSoundBtn.addEventListener('click', () => {
+      beep.currentTime = 0;
+      const promise = beep.play();
+      if (promise) promise.catch(() => {
+        alert('⚠️ Звук заблокирован.\nСделайте клик на странице и повторите.');
+      });
+    });
+
+    function formatTime(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return h > 0 
+        ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+        : `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    function stopT2Manually() {
+      if (t2Interval) {
+        clearInterval(t2Interval);
+        t2Interval = null;
+        t2Active = false;
+        t2EndTime = null;
+        stopBtn.textContent = '✅ Остановлено';
+        statusEl.textContent = 'Таймер 2 остановлен вручную.';
+      }
+    }
+
+    function startT2() {
+      if (t2Active) return;
+      t2Active = true;
+      t2EndTime = Date.now() + DURATION_T2 * 1000;
+      stopBtn.disabled = false;
+      stopBtn.textContent = '⏹ Остановить Таймер 2';
+      statusEl.textContent = 'Таймер 2 запущен (цикличный).';
+
+      if (t2Interval) clearInterval(t2Interval);
+      t2Interval = setInterval(updateT2, 200);
+    }
+
+    function updateT2() {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((t2EndTime - now) / 1000));
+      t2El.textContent = formatTime(remaining);
+
+      if (remaining <= 0) {
+        beep.currentTime = 0;
+        beep.play().catch(() => {});
+        t2EndTime = Date.now() + DURATION_T2 * 1000;
+        t2El.textContent = formatTime(DURATION_T2);
+      }
+    }
+
+    function restartT1() {
+      t1EndTime = Date.now() + DURATION_T1 * 1000;
+      statusEl.textContent = '🔄 Таймер 1 перезапущен.';
+    }
+
+    function updateT1() {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((t1EndTime - now) / 1000));
+      t1El.textContent = formatTime(remaining);
+
+      if (remaining <= 0) {
+        t1EndTime = now + DURATION_T1 * 1000;
+        startT2();
+      }
+    }
+
+    setInterval(updateT1, 200);
+
+    restartBtn.addEventListener('click', restartT1);
+    stopBtn.addEventListener('click', stopT2Manually);
+
+    // Инициализация отображения
+    t1El.textContent = formatTime(DURATION_T1);
+    t2El.textContent = formatTime(DURATION_T2);
+  </script>
+</body>
+</html>
