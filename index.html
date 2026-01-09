@@ -6,45 +6,35 @@
   <title>Главная</title>
   <style>
     body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background-color: #f5f5f5;
       font-family: Arial, sans-serif;
-    }
-    .container {
       text-align: center;
+      padding: 50px;
     }
-    h1 {
-      color: #333;
-      margin-bottom: 30px;
-    }
-    .btn {
-      display: block;
-      width: 200px;
-      padding: 12px 20px;
-      margin: 10px auto;
-      font-size: 18px;
-      text-decoration: none;
-      color: white;
-      background-color: #007bff;
-      border: none;
-      border-radius: 6px;
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
       cursor: pointer;
-      transition: background-color 0.3s;
-    }
-    .btn:hover {
-      background-color: #0056b3;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Добро пожаловать!</h1>
-    <button class="btn" onclick="location.href='message.html'">Перейти в чат</button>
-    <button class="btn" onclick="location.href='timer.html'">Перейти к таймеру</button>
-  </div>
+  <h2>Моё портфолио</h2>
+  <button onclick="openChat()">Открыть чат</button>
+
+  <script>
+    function openChat() {
+      // Параметры окна: ширина, высота, позиция и т.д.
+      const width = 400;
+      const height = 500;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+
+      window.open(
+        'message.html',               // путь к файлу
+        'chatWindow',                 // имя окна (может быть любым)
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+      );
+    }
+  </script>
 </body>
 </html>
