@@ -64,7 +64,7 @@ body {
       userAgent: navigator.userAgent
     };
 
-    console.log("Пользователь пришёл с:", document.referrer);
+    
     // Лог открытия формы (без ожидания ответа)
       fetch(SCRIPT_URL, {
       method: 'POST',
@@ -72,7 +72,6 @@ body {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
       message: "Open form",
-      referrer: document.referrer,
       queryParams: queryParams
       })
     }).catch(() => {});
