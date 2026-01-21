@@ -57,58 +57,58 @@ body {
   <p id="status"></p>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
-    const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
-    const queryParams = {
-      ...urlParams,
-      userAgent: navigator.userAgent
-    };
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
 
-    
-  const payload = new URLSearchParams();
-  payload.append('message', 'Open form');
-  payload.append('referrer', document.referrer);
-  payload.append('queryParams', JSON.stringify(queryParams)); // сериализуем объект в строку
+  // Собираем параметры из URL
+  const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
 
-      // Добавляем ВСЕ параметры из URL по отдельности
-  for (const [key, value] of Object.entries(urlParams)) {
-    payload.append(key, value);
+  // Функция для создания payload (чтобы не дублировать логику)
+  function createPayload(extraFields = {}) {
+    const payload = new URLSearchParams();
+
+    // Добавляем служебные поля
+    payload.append('message', extraFields.message || 'Open form');
+    payload.append('referrer', document.referrer);
+    payload.append('userAgent', navigator.userAgent);
+
+    // Добавляем все параметры из URL
+    for (const [key, value] of Object.entries(urlParams)) {
+      payload.append(key, value);
+    }
+
+    return payload;
   }
 
-  // Отправляем без заголовков и без mode: 'no-cors' (он по умолчанию для простых запросов)
+  // 🔹 Лог открытия формы (при загрузке)
   fetch(SCRIPT_URL, {
     method: 'POST',
-    body: payload
-    // НЕ указываем headers — браузер сам поставит правильный Content-Type
-  }).catch(() => {
-    // Игнорируем ошибки (например, если скрипт не ответил)
+    body: createPayload()
+  }).catch(() => {});
+
+  // 🔹 Обработка отправки формы
+  document.getElementById('anonForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = e.target.message.value.trim();
+    if (!msg) return;
+
+    const btn = e.target.querySelector('button');
+    const status = document.getElementById('status');
+    btn.disabled = true;
+    status.textContent = 'Отправка...';
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: createPayload({ message: msg }) // подменяем message
+      });
+      status.textContent = '✅ Отправлено!';
+      e.target.reset();
+    } catch {
+      status.textContent = '❌ Ошибка';
+    } finally {
+      btn.disabled = false;
+    }
   });
-
-    document.getElementById('anonForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = e.target.message.value.trim();
-      if (!msg) return;
-
-      const btn = e.target.querySelector('button');
-      const status = document.getElementById('status');
-      btn.disabled = true;
-      status.textContent = 'Отправка...';
-
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: msg, queryParams })
-        });
-        status.textContent = '✅ Отправлено!';
-        e.target.reset();
-      } catch {
-        status.textContent = '❌ Ошибка';
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  </script>
+</script>
 </body>
 </html>
