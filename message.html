@@ -69,7 +69,7 @@ body {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: "Open form",referrer: document.referrer, queryParams })
+      body: JSON.stringify({ message: "Open form",document.referrer, queryParams })
     }).catch(() => {});
 
     document.getElementById('anonForm').addEventListener('submit', async (e) => {
