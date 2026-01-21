@@ -60,9 +60,9 @@ body {
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
     const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
     const queryParams = {
-      ...urlParams + '\n',
-      userAgent: navigator.userAgent + '\n',
-      referrer: document.referrer
+      ...urlParams,
+      userAgent: '\n' +navigator.userAgent,
+      referrer: '\n' +document.referrer
     };
 
     // Лог открытия формы (без ожидания ответа)
