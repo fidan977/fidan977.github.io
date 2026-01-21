@@ -57,52 +57,46 @@ body {
   <p id="status"></p>
 
   <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTE4fgbIuhUwIzCR2KRqRGaaUYJyhYx0YflWC0TmF9b5Hkx7t5ZR_QPWM755HljBoN2A/exec';
+    const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+    const queryParams = {
+      ...urlParams,
+      userAgent: navigator.userAgent
+    };
 
-  // Собираем параметры из URL
-  const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
-
-  // Функция отправки (без ожидания ответа)
-  function sendToGAS(message) {
-    const payload = new URLSearchParams();
-    payload.append('message', message);
-    payload.append('referrer', document.referrer);
-    payload.append('userAgent', navigator.userAgent);
-
-    // Добавляем все параметры из адресной строки
-    for (const [key, value] of Object.entries(urlParams)) {
-      payload.append(key, value);
-    }
-
-    // Отправляем без CORS и без ожидания результата
+    // Лог открытия формы (без ожидания ответа)
     fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
-      body: payload
-      // ⚠️ НЕ указываем headers!
-    }).catch(() => {
-      // Ошибки игнорируем — они нормальны при no-cors
-    });
-  }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: "Open form", queryParams })
+    }).catch(() => {});
 
-  // Лог открытия страницы
-  sendToGAS('Open form');
-
-  // Обработка формы (если есть)
-  const form = document.getElementById('anonForm');
-  if (form) {
-    form.addEventListener('submit', (e) => {
+    document.getElementById('anonForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const msg = e.target.message?.value?.trim();
-      if (msg) {
-        sendToGAS(msg);
-        // Можно сразу показать "успешно", так как ответ не важен
-        const status = document.getElementById('status');
-        if (status) status.textContent = '✅ Отправлено!';
+      const msg = e.target.message.value.trim();
+      if (!msg) return;
+
+      const btn = e.target.querySelector('button');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+      status.textContent = 'Отправка...';
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg, queryParams })
+        });
+        status.textContent = '✅ Отправлено!';
         e.target.reset();
+      } catch {
+        status.textContent = '❌ Ошибка';
+      } finally {
+        btn.disabled = false;
       }
     });
-  }
-</script>
+  </script>
 </body>
 </html>
