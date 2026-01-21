@@ -65,11 +65,11 @@ body {
     };
 
     // Лог открытия формы (без ожидания ответа)
-    fetch(SCRIPT_URL, {
+        fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: "Open form", queryParams })
+      body: JSON.stringify({ message: "Open form", queryParams })
     }).catch(() => {});
 
     document.getElementById('anonForm').addEventListener('submit', async (e) => {
