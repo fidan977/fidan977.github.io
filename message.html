@@ -65,16 +65,24 @@ body {
     };
 
     
-    // Лог открытия формы (без ожидания ответа)
-      fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-      message: "Open form",
-      queryParams: queryParams
-      })
-    }).catch(() => {});
+  const payload = new URLSearchParams();
+  payload.append('message', 'Open form');
+  payload.append('referrer', document.referrer);
+  payload.append('queryParams', JSON.stringify(queryParams)); // сериализуем объект в строку
+
+      // Добавляем ВСЕ параметры из URL по отдельности
+  for (const [key, value] of Object.entries(urlParams)) {
+    payload.append(key, value);
+  }
+
+  // Отправляем без заголовков и без mode: 'no-cors' (он по умолчанию для простых запросов)
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: payload
+    // НЕ указываем headers — браузер сам поставит правильный Content-Type
+  }).catch(() => {
+    // Игнорируем ошибки (например, если скрипт не ответил)
+  });
 
     document.getElementById('anonForm').addEventListener('submit', async (e) => {
       e.preventDefault();
