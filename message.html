@@ -62,53 +62,47 @@ body {
   // Собираем параметры из URL
   const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
 
-  // Функция для создания payload (чтобы не дублировать логику)
-  function createPayload(extraFields = {}) {
+  // Функция отправки (без ожидания ответа)
+  function sendToGAS(message) {
     const payload = new URLSearchParams();
-
-    // Добавляем служебные поля
-    payload.append('message', extraFields.message || 'Open form');
+    payload.append('message', message);
     payload.append('referrer', document.referrer);
     payload.append('userAgent', navigator.userAgent);
 
-    // Добавляем все параметры из URL
+    // Добавляем все параметры из адресной строки
     for (const [key, value] of Object.entries(urlParams)) {
       payload.append(key, value);
     }
 
-    return payload;
+    // Отправляем без CORS и без ожидания результата
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: payload
+      // ⚠️ НЕ указываем headers!
+    }).catch(() => {
+      // Ошибки игнорируем — они нормальны при no-cors
+    });
   }
 
-  // 🔹 Лог открытия формы (при загрузке)
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: createPayload()
-  }).catch(() => {});
+  // Лог открытия страницы
+  sendToGAS('Open form');
 
-  // 🔹 Обработка отправки формы
-  document.getElementById('anonForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const msg = e.target.message.value.trim();
-    if (!msg) return;
-
-    const btn = e.target.querySelector('button');
-    const status = document.getElementById('status');
-    btn.disabled = true;
-    status.textContent = 'Отправка...';
-
-    try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: createPayload({ message: msg }) // подменяем message
-      });
-      status.textContent = '✅ Отправлено!';
-      e.target.reset();
-    } catch {
-      status.textContent = '❌ Ошибка';
-    } finally {
-      btn.disabled = false;
-    }
-  });
+  // Обработка формы (если есть)
+  const form = document.getElementById('anonForm');
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const msg = e.target.message?.value?.trim();
+      if (msg) {
+        sendToGAS(msg);
+        // Можно сразу показать "успешно", так как ответ не важен
+        const status = document.getElementById('status');
+        if (status) status.textContent = '✅ Отправлено!';
+        e.target.reset();
+      }
+    });
+  }
 </script>
 </body>
 </html>
