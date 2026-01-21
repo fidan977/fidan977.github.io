@@ -61,7 +61,7 @@ body {
     const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
     const queryParams = {
       ...urlParams,
-      "устройство=",
+      dars: 'устройство=',
       userAgent: navigator.userAgent,
       referrer: document.referrer
     };
