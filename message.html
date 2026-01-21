@@ -61,7 +61,8 @@ body {
     const urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
     const queryParams = {
       ...urlParams,
-      userAgent: navigator.userAgent
+      userAgent: navigator.userAgent,
+      referrer: document.referrer
     };
 
     // Лог открытия формы (без ожидания ответа)
