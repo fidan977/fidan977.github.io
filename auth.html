@@ -2,97 +2,125 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Вход через Google Таблицу</title>
-    <!-- Подключаем библиотеку Google для кнопки -->
+    <title>Вход в систему</title>
+    <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 50px; background: #f0f2f5; }
-        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
-        #user-info { display: none; }
-        .status { margin-top: 10px; font-weight: bold; }
-        .error { color: red; }
-        .success { color: green; }
-        .loader { display: none; margin-top: 10px; color: #666; }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f0f2f5; margin: 0; padding: 20px; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .hidden { display: none !important; }
+        .error { color: #e74c3c; margin-top: 15px; font-size: 14px; min-height: 20px; }
+        .success { color: #27ae60; font-weight: bold; }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 15px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #user-avatar { width: 80px; height: 80px; border-radius: 50%; margin: 10px auto; display: block; }
+        button { background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-top: 15px; }
+        button:hover { background: #c0392b; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Вход в систему</h2>
+<div class="card">
+    <h2>Вход</h2>
     
-    <!-- Кнопка Google -->
-    <div id="g_id_onload"
-         data-client_id="ВАШ_CLIENT_ID_ИЗ_GOOGLE_CONSOLE"
-         data-callback="handleGoogleResponse"
-         data-auto_prompt="false">
-    </div>
-    <div class="g_id_signin"
-         data-type="standard"
-         data-size="large"
-         data-theme="outline"
-         data-text="signin_with"
-         data-shape="rectangular"
-         data-logo_alignment="left">
+    <!-- Форма входа с кнопкой Google -->
+    <div id="login-section">
+        <div id="g_id_onload"
+             data-client_id="461200840639-bup0mjs0lji7cr1lbbd49poc2t78ua4n.apps.googleusercontent.com"
+             data-callback="handleGoogleResponse"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-size="large"
+             data-theme="outline"
+             data-text="signin_with"
+             data-shape="rectangular"
+             data-logo_alignment="left">
+        </div>
+        
+        <div class="loader hidden" id="loader"></div>
+        <div class="error" id="error-msg"></div>
     </div>
 
-    <div class="loader" id="loader">Проверка доступа...</div>
-    <div class="status" id="status-msg"></div>
-
-    <!-- Данные пользователя -->
-    <div id="user-info">
-        <h3>Добро пожаловать, <span id="user-name"></span>!</h3>
-        <p>Email: <span id="user-email"></span></p>
-        <button onclick="location.reload()" style="padding: 10px 20px; cursor: pointer;">Выйти</button>
+    <!-- Успешный вход -->
+    <div id="success-section" class="hidden">
+        <p class="success">✓ Доступ разрешён</p>
+        <img id="user-avatar" src="" alt="Avatar">
+        <p><strong id="user-name"></strong></p>
+        <p id="user-email" style="color:#666; font-size:14px;"></p>
+        <button onclick="logout()">Выйти</button>
     </div>
 </div>
 
 <script>
-    // ВСТАВЬТЕ СЮДА ССЫЛКУ НА ВАШ СКРИПТ (из Шага 3)
-    const SCRIPT_URL = 'ВАШ_URL_СКРИПТА';
+    // 🔥 ВСТАВЬТЕ СЮДА ССЫЛКУ НА ВАШ APPS SCRIPT (из прошлого шага)
+    const SCRIPT_URL = 'https://script.google.com/macros/s/ВАШ_СКРИПТ/exec';
 
-    // 1. Получаем токен от Google
+    // Обработка успешного ответа от Google
     function handleGoogleResponse(response) {
-        // Декодируем токен, чтобы забрать email
+        // Декодируем токен (payload - вторая часть)
         const userInfo = JSON.parse(atob(response.credential.split('.')[1]));
+        const email = userInfo.email;
         
-        document.getElementById('loader').style.display = 'block';
-        document.getElementById('status-msg').innerText = '';
-
-        // 2. Отправляем email на проверку в Google Таблицу
-        checkAccessInSheet(userInfo.email, userInfo.name);
-    }
-
-    // 3. Запрос к Apps Script
-    function checkAccessInSheet(email, name) {
+        document.getElementById('loader').classList.remove('hidden');
+        document.getElementById('error-msg').textContent = '';
+        
+        // Отправляем email на проверку в Google Таблицу
         fetch(SCRIPT_URL, {
             method: 'POST',
-            body: JSON.stringify({
-                action: 'login',
-                email: email
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'checkAccess', email: email })
         })
         .then(res => res.json())
         .then(data => {
-            document.getElementById('loader').style.display = 'none';
+            document.getElementById('loader').classList.add('hidden');
             
             if (data.success) {
-                // Успех
-                document.getElementById('user-info').style.display = 'block';
-                document.getElementById('user-name').innerText = data.name || name;
-                document.getElementById('user-email').innerText = email;
-                document.querySelector('.g_id_signin').style.display = 'none';
+                showSuccess(userInfo);
             } else {
-                // Ошибка (нет в таблице или заблокирован)
-                document.getElementById('status-msg').innerText = 'Ошибка: ' + data.message;
-                document.getElementById('status-msg').className = 'status error';
+                document.getElementById('error-msg').textContent = '❌ ' + data.message;
             }
         })
         .catch(err => {
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('status-msg').innerText = 'Ошибка соединения';
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('error-msg').textContent = '❌ Ошибка соединения';
             console.error(err);
         });
     }
+
+    function showSuccess(user) {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('success-section').classList.remove('hidden');
+        document.getElementById('user-name').textContent = user.name;
+        document.getElementById('user-email').textContent = user.email;
+        document.getElementById('user-avatar').src = user.picture;
+        
+        // Сохраняем сессию (опционально)
+        localStorage.setItem('authUser', JSON.stringify(user));
+    }
+
+    function logout() {
+        localStorage.removeItem('authUser');
+        // Сброс сессии Google (опционально)
+        if (window.google?.accounts?.id) {
+            google.accounts.id.disableAutoSelect();
+        }
+        location.reload();
+    }
+
+    // Проверка при загрузке: если пользователь уже авторизован
+    window.onload = function() {
+        const saved = localStorage.getItem('authUser');
+        if (saved) {
+            try {
+                const user = JSON.parse(saved);
+                showSuccess(user);
+            } catch(e) {
+                localStorage.removeItem('authUser');
+            }
+        }
+    };
 </script>
 
 </body>
