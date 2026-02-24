@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход через Google Таблицу</title>
+    <!-- Подключаем библиотеку Google для кнопки -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 50px; background: #f0f2f5; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
+        #user-info { display: none; }
+        .status { margin-top: 10px; font-weight: bold; }
+        .error { color: red; }
+        .success { color: green; }
+        .loader { display: none; margin-top: 10px; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Вход в систему</h2>
+    
+    <!-- Кнопка Google -->
+    <div id="g_id_onload"
+         data-client_id="ВАШ_CLIENT_ID_ИЗ_GOOGLE_CONSOLE"
+         data-callback="handleGoogleResponse"
+         data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"
+         data-type="standard"
+         data-size="large"
+         data-theme="outline"
+         data-text="signin_with"
+         data-shape="rectangular"
+         data-logo_alignment="left">
+    </div>
+
+    <div class="loader" id="loader">Проверка доступа...</div>
+    <div class="status" id="status-msg"></div>
+
+    <!-- Данные пользователя -->
+    <div id="user-info">
+        <h3>Добро пожаловать, <span id="user-name"></span>!</h3>
+        <p>Email: <span id="user-email"></span></p>
+        <button onclick="location.reload()" style="padding: 10px 20px; cursor: pointer;">Выйти</button>
+    </div>
+</div>
+
+<script>
+    // ВСТАВЬТЕ СЮДА ССЫЛКУ НА ВАШ СКРИПТ (из Шага 3)
+    const SCRIPT_URL = 'ВАШ_URL_СКРИПТА';
+
+    // 1. Получаем токен от Google
+    function handleGoogleResponse(response) {
+        // Декодируем токен, чтобы забрать email
+        const userInfo = JSON.parse(atob(response.credential.split('.')[1]));
+        
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('status-msg').innerText = '';
+
+        // 2. Отправляем email на проверку в Google Таблицу
+        checkAccessInSheet(userInfo.email, userInfo.name);
+    }
+
+    // 3. Запрос к Apps Script
+    function checkAccessInSheet(email, name) {
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'login',
+                email: email
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('loader').style.display = 'none';
+            
+            if (data.success) {
+                // Успех
+                document.getElementById('user-info').style.display = 'block';
+                document.getElementById('user-name').innerText = data.name || name;
+                document.getElementById('user-email').innerText = email;
+                document.querySelector('.g_id_signin').style.display = 'none';
+            } else {
+                // Ошибка (нет в таблице или заблокирован)
+                document.getElementById('status-msg').innerText = 'Ошибка: ' + data.message;
+                document.getElementById('status-msg').className = 'status error';
+            }
+        })
+        .catch(err => {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('status-msg').innerText = 'Ошибка соединения';
+            console.error(err);
+        });
+    }
+</script>
+
+</body>
+</html>
