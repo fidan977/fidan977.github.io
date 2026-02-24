@@ -4,94 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход в систему</title>
-    
-    <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-        }
-        .card { 
-            background: white; 
-            padding: 40px 30px; 
-            border-radius: 16px; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
-            width: 100%; 
-            max-width: 420px; 
-            text-align: center; 
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; }
+        .card { background: white; padding: 40px 30px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 420px; text-align: center; }
         .card h2 { margin-bottom: 25px; color: #333; }
-        
-        /* Google button container */
         #g_id_onload { display: none; }
         .g_id_signin { margin: 0 auto; }
-        
-        /* Загрузчик */
-        .loader { 
-            border: 3px solid #f3f3f3; 
-            border-top: 3px solid #667eea; 
-            border-radius: 50%; 
-            width: 28px; 
-            height: 28px; 
-            animation: spin 1s linear infinite; 
-            margin: 20px auto; 
-        }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 28px; height: 28px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Сообщения */
-        .error { 
-            color: #e74c3c; 
-            margin-top: 15px; 
-            font-size: 14px; 
-            min-height: 20px;
-            line-height: 1.4;
-        }
-        .success { 
-            color: #27ae60; 
-            font-weight: 600; 
-            margin-bottom: 10px;
-        }
-        
-        /* Секции */
+        .error { color: #e74c3c; margin-top: 15px; font-size: 14px; min-height: 20px; line-height: 1.4; }
+        .success { color: #27ae60; font-weight: 600; margin-bottom: 10px; }
         .hidden { display: none !important; }
-        
-        /* Профиль пользователя */
-        #user-avatar { 
-            width: 90px; 
-            height: 90px; 
-            border-radius: 50%; 
-            margin: 15px auto; 
-            display: block; 
-            border: 3px solid #667eea;
-            object-fit: cover;
-        }
+        #user-avatar { width: 90px; height: 90px; border-radius: 50%; margin: 15px auto; display: block; border: 3px solid #667eea; object-fit: cover; }
         #user-name { font-size: 18px; font-weight: 600; color: #333; margin: 10px 0 5px; }
         #user-email { color: #666; font-size: 14px; margin-bottom: 20px; word-break: break-all; }
-        
-        /* Кнопки */
-        button { 
-            background: #e74c3c; 
-            color: white; 
-            border: none; 
-            padding: 12px 24px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 14px; 
-            font-weight: 500;
-            transition: background 0.2s;
-        }
+        button { background: #e74c3c; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s; }
         button:hover { background: #c0392b; }
-        button:active { transform: scale(0.98); }
-        
-        /* Footer */
         .footer { margin-top: 25px; font-size: 12px; color: #999; }
         .footer a { color: #667eea; text-decoration: none; }
     </style>
@@ -101,34 +31,21 @@
 <div class="card">
     <h2>🔐 Вход в систему</h2>
     
-    <!-- 🔹 СЕКЦИЯ ВХОДА -->
     <div id="login-section">
-        <!-- Конфигурация Google Sign-In -->
         <div id="g_id_onload"
              data-client_id="461200840639-bup0mjs0lji7cr1lbbd49poc2t78ua4n.apps.googleusercontent.com"
              data-callback="handleGoogleResponse"
              data-auto_prompt="false"
              data-ux_mode="popup">
         </div>
-        
-        <!-- Кнопка входа (рендерится сюда) -->
         <div class="g_id_signin"
-             data-type="standard"
-             data-size="large"
-             data-theme="outline"
-             data-text="signin_with"
-             data-shape="rectangular"
-             data-logo_alignment="left">
+             data-type="standard" data-size="large" data-theme="outline"
+             data-text="signin_with" data-shape="rectangular" data-logo_alignment="left">
         </div>
-        
-        <!-- Индикатор загрузки -->
         <div class="loader hidden" id="loader"></div>
-        
-        <!-- Сообщение об ошибке -->
         <div class="error" id="error-msg"></div>
     </div>
 
-    <!-- 🔹 СЕКЦИЯ УСПЕШНОГО ВХОДА -->
     <div id="success-section" class="hidden">
         <p class="success">✓ Доступ разрешён</p>
         <img id="user-avatar" src="" alt="Avatar">
@@ -144,44 +61,37 @@
 </div>
 
 <script>
-    // 🔥 🔥 🔥 ВСТАВЬТЕ СЮДА ВАШУ ССЫЛКУ НА APPS SCRIPT 🔥 🔥 🔥
-    // Должна заканчиваться на /exec
+    // 🔥 ВАША ССЫЛКА НА APPS SCRIPT (уже вставлена)
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymAmhs0R4P9_nRD6_SFyi62re6mB5Qvfzbq3Ti36zyZMjEShGvElIZFm0Dae4YrVgXcQ/exec';
 
-    // ============================================
-    // 🔄 ОБРАБОТКА ОТВЕТА ОТ GOOGLE
-    // ============================================
     function handleGoogleResponse(response) {
-        const idToken = response.credential; // 🔐 JWT токен, подписанный Google
+        const idToken = response.credential;
         
-        // UI: показываем загрузку
         document.getElementById('loader').classList.remove('hidden');
         document.getElementById('error-msg').textContent = '';
         document.querySelector('.g_id_signin').style.opacity = '0.6';
         document.querySelector('.g_id_signin').style.pointerEvents = 'none';
         
-        // 🔐 Отправляем ТОКЕН на проверку (не email!)
+        // 🔐 Отправляем параметры через URL-encoded (не JSON!)
+        const params = new URLSearchParams();
+        params.append('action', 'checkAccess');
+        params.append('token', idToken);
+        
         fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                action: 'checkAccess', 
-                token: idToken  // Отправляем весь токен для крипто-проверки
-            })
+            body: params  // Отправляем как form data
+            // ❌ Без headers: Content-Type — браузер сам поставит application/x-www-form-urlencoded
         })
         .then(res => {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.json();
         })
         .then(data => {
-            // UI: скрываем загрузку
             document.getElementById('loader').classList.add('hidden');
             document.querySelector('.g_id_signin').style.opacity = '1';
             document.querySelector('.g_id_signin').style.pointerEvents = 'auto';
             
             if (data.success) {
-                // Декодируем токен для отображения данных (payload - вторая часть JWT)
                 const userInfo = JSON.parse(atob(idToken.split('.')[1]));
                 showSuccess(userInfo);
             } else {
@@ -192,76 +102,44 @@
             document.getElementById('loader').classList.add('hidden');
             document.querySelector('.g_id_signin').style.opacity = '1';
             document.querySelector('.g_id_signin').style.pointerEvents = 'auto';
-            document.getElementById('error-msg').textContent = '❌ Ошибка соединения. Проверьте консоль (F12).';
+            document.getElementById('error-msg').textContent = '❌ Ошибка соединения';
             console.error('Fetch error:', err);
         });
     }
 
-    // ============================================
-    // ✅ ПОКАЗ УСПЕШНОГО ВХОДА
-    // ============================================
     function showSuccess(user) {
         document.getElementById('login-section').classList.add('hidden');
         document.getElementById('success-section').classList.remove('hidden');
-        
         document.getElementById('user-name').textContent = user.name;
         document.getElementById('user-email').textContent = user.email;
         document.getElementById('user-avatar').src = user.picture || 'https://via.placeholder.com/90?text=👤';
-        
-        // Сохраняем сессию в localStorage (опционально)
-        try {
-            localStorage.setItem('authUser', JSON.stringify({
-                email: user.email,
-                name: user.name,
-                picture: user.picture,
-                loginTime: Date.now()
-            }));
-        } catch(e) { console.warn('Не удалось сохранить сессию', e); }
+        localStorage.setItem('authUser', JSON.stringify({ email: user.email, name: user.name, picture: user.picture, loginTime: Date.now() }));
     }
 
-    // ============================================
-    // 🚪 ВЫХОД ИЗ СИСТЕМЫ
-    // ============================================
     function logout() {
-        // Очищаем локальную сессию
         localStorage.removeItem('authUser');
-        
-        // Сбрасываем автовыбор аккаунта Google
         if (window.google?.accounts?.id) {
             google.accounts.id.disableAutoSelect();
-            google.accounts.id.revoke(localStorage.getItem('lastEmail') || '', () => {});
         }
-        
-        // Перезагружаем страницу
         location.reload();
     }
 
-    // ============================================
-    // 🔄 ПРОВЕРКА ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
-    // ============================================
     window.onload = function() {
-        // Проверяем, есть ли сохранённая сессия
         const saved = localStorage.getItem('authUser');
         if (saved) {
             try {
                 const user = JSON.parse(saved);
-                // Опционально: можно проверить, не истекла ли сессия (например, 24 часа)
-                const maxAge = 24 * 60 * 60 * 1000; // 24 часа
+                const maxAge = 24 * 60 * 60 * 1000;
                 if (Date.now() - user.loginTime < maxAge) {
                     showSuccess(user);
                     return;
                 }
-            } catch(e) {
-                localStorage.removeItem('authUser');
-            }
+            } catch(e) { localStorage.removeItem('authUser'); }
         }
-        
-        // Инициализируем Google Sign-In (если библиотека загрузилась)
         if (window.google?.accounts?.id) {
             google.accounts.id.initialize({
                 client_id: "461200840639-bup0mjs0lji7cr1lbbd49poc2t78ua4n.apps.googleusercontent.com",
-                callback: handleGoogleResponse,
-                auto_select: false
+                callback: handleGoogleResponse
             });
             google.accounts.id.renderButton(
                 document.querySelector('.g_id_signin'),
