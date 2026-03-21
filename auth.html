@@ -71,14 +71,14 @@
       showStatus('⏳ Отправка...', '');
 
       try {
-        const response = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          credentials: 'include',  // 🔥 Критично для передачи авторизации
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
+const response = await fetch(SCRIPT_URL, {
+  method: 'POST',
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'text/plain',  // 🔥 Меняем на text/plain
+  },
+  body: JSON.stringify(payload)  // Данные всё ещё в JSON, просто заголовок другой
+});
 
         // Google Apps Script может вернуть редирект — обрабатываем
         const result = await response.json().catch(() => ({}));
