@@ -3,125 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вход</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <title>Отправка в Telegram</title>
   <style>
-    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .card { background: white; padding: 40px 30px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); text-align: center; max-width: 420px; width: 100%; }
-    .hidden { display: none !important; }
-    .error { color: #e74c3c; margin-top: 15px; min-height: 20px; }
-    .success { color: #27ae60; font-weight: 600; margin: 10px 0; }
-    #avatar { width: 90px; height: 90px; border-radius: 50%; margin: 15px auto; display: block; border: 3px solid #667eea; object-fit: cover; }
-    #user-name { font-size: 18px; font-weight: 600; color: #333; margin: 5px 0; }
-    #user-email { color: #666; font-size: 14px; margin-bottom: 20px; word-break: break-all; }
-    button { background: #e74c3c; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-top: 10px; }
-    button:hover { background: #c0392b; }
-    .loader { border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 28px; height: 28px; animation: spin 1s linear infinite; margin: 20px auto; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+    input, textarea { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; }
+    button { background: #0088cc; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; }
+    button:hover { background: #0077b5; }
+    #status { margin-top: 20px; padding: 10px; border-radius: 4px; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
   </style>
 </head>
 <body>
 
-<div class="card">
-  <h2>🔐 Вход</h2>
+  <h2>📤 Отправить данные в Telegram</h2>
   
-  <div id="login-view">
-    <div id="g_id_signin"></div>
-    <div class="loader hidden" id="loader"></div>
-    <div class="error" id="msg"></div>
-  </div>
+  <label>Ваше имя:</label>
+  <input type="text" id="name" placeholder="Иван">
   
-  <div id="success-view" class="hidden">
-    <p class="success">✓ Доступ разрешён</p>
-    <img id="avatar" src="" alt="Avatar">
-    <div id="user-name"></div>
-    <div id="user-email"></div>
-    <button onclick="logout()">🚪 Выйти</button>
-  </div>
-</div>
+  <label>Сообщение:</label>
+  <textarea id="message" rows="4" placeholder="Текст сообщения..."></textarea>
+  
+  <label>Доп. параметры (JSON, необязательно):</label>
+  <textarea id="extra" rows="3" placeholder='{"order_id": 123, "status": "new"}'></textarea>
+  
+  <button onclick="sendData()">🚀 Отправить</button>
+  
+  <div id="status"></div>
 
-<script>
-  // 🔥 ВАША ССЫЛКА НА APPS SCRIPT (без пробелов!)
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz17gn2JxsR6IwPCKonUudB9FfrP5fllJms4k0myStaYfws4gB10UHyHSVJyug9HjmkTQ/exec';
-  const REDIRECT_AFTER = 'https://script.google.com/macros/s/AKfycbz17gn2JxsR6IwPCKonUudB9FfrP5fllJms4k0myStaYfws4gB10UHyHSVJyug9HjmkTQ/exec'; // Куда вернуться после успеха
+  <script>
+    // 🔥 Замените на ваш опубликованный URL веб-приложения
+    const SCRIPT_URL = 'https://script.google.com/macros/s/ВАШ_ИДЕНТИФИКАТОР/exec';
 
-  // 🔹 Проверка: вернулись ли мы после проверки токена
-  const params = new URLSearchParams(location.search);
-  if (params.get('status') === 'ok') {
-    showSuccess({
-      email: params.get('email'),
-      name: params.get('name'),
-      picture: params.get('picture')
-    });
-    history.replaceState(null, '', location.pathname); // Чистим URL
-  } else if (params.get('error')) {
-    document.getElementById('msg').textContent = '❌ ' + params.get('error');
-    history.replaceState(null, '', location.pathname);
-  } else {
-    // Проверка сохранённой сессии
-    const saved = localStorage.getItem('auth');
-    if (saved) {
-      try {
-        const u = JSON.parse(saved);
-        if (Date.now() - u.time < 24*60*60*1000) {
-          showSuccess(u);
+    async function sendData() {
+      const statusDiv = document.getElementById('status');
+      const name = document.getElementById('name').value.trim();
+      const message = document.getElementById('message').value.trim();
+      const extraRaw = document.getElementById('extra').value.trim();
+      
+      // Валидация
+      if (!name || !message) {
+        showStatus('❌ Заполните имя и сообщение', 'error');
+        return;
+      }
+
+      // Парсим доп. параметры
+      let extra = {};
+      if (extraRaw) {
+        try {
+          extra = JSON.parse(extraRaw);
+        } catch (e) {
+          showStatus('❌ Ошибка в JSON параметров: ' + e.message, 'error');
+          return;
         }
-      } catch(e) { localStorage.removeItem('auth'); }
+      }
+
+      // Формируем payload
+      const payload = {
+        name: name,
+        message: message,
+        extra: extra,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        platform: /mobile/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
+      };
+
+      showStatus('⏳ Отправка...', '');
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          credentials: 'include',  // 🔥 Критично для передачи авторизации
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // Google Apps Script может вернуть редирект — обрабатываем
+        const result = await response.json().catch(() => ({}));
+        
+        if (response.ok || result.status === 'ok') {
+          showStatus('✅ Сообщение отправлено!', 'success');
+          document.getElementById('message').value = ''; // Очистить поле
+        } else {
+          showStatus('❌ Ошибка: ' + (result.error || response.statusText), 'error');
+        }
+      } catch (error) {
+        showStatus('❌ Сетевая ошибка: ' + error.message, 'error');
+        console.error('Fetch error:', error);
+      }
     }
-  }
 
-  // 🔹 Обработчик: ПОЛУЧИЛИ ТОКЕН → СРАЗУ РЕДИРЕКТ НА СКРИПТ
-  function handleCredential(response) {
-    document.getElementById('loader').classList.remove('hidden');
-    
-    const token = response.credential;
-    
-    // 🔥 МГНОВЕННЫЙ РЕДИРЕКТ на скрипт с токеном в параметрах
-    const target = SCRIPT_URL.trim() + 
-      '?action=auth' +
-      '&token=' + encodeURIComponent(token) +
-      '&redirect=' + encodeURIComponent(REDIRECT_AFTER) +
-      '&ts=' + Date.now(); // Чтобы избежать кэша
-    
-    console.log('🔄 Redirect to:', target);
-    location.href = target; // Никаких fetch, только редирект!
-  }
-
-  function showSuccess(user) {
-    document.getElementById('login-view').classList.add('hidden');
-    document.getElementById('success-view').classList.remove('hidden');
-    document.getElementById('user-name').textContent = user.name || user.email;
-    document.getElementById('user-email').textContent = user.email;
-    document.getElementById('avatar').src = user.picture || 'https://via.placeholder.com/90?text=👤';
-    
-    localStorage.setItem('auth', JSON.stringify({
-      email: user.email, name: user.name, picture: user.picture, time: Date.now()
-    }));
-  }
-
-  function logout() {
-    localStorage.removeItem('auth');
-    location.reload();
-  }
-
-  // 🔹 Инициализация
-  window.onload = function() {
-    if (!document.getElementById('success-view').classList.contains('hidden')) return;
-    
-    if (window.google?.accounts?.id) {
-      google.accounts.id.initialize({
-        client_id: "461200840639-bup0mjs0lji7cr1lbbd49poc2t78ua4n.apps.googleusercontent.com",
-        callback: handleCredential,
-        ux_mode: "redirect" // 🔹 КРИТИЧНО: редирект, а не popup
-      });
-      google.accounts.id.renderButton(
-        document.getElementById('g_id_signin'),
-        { theme: "outline", size: "large", text: "signin_with", shape: "rectangular" }
-      );
-    } else {
-      document.getElementById('msg').textContent = '❌ Ошибка загрузки Google SDK';
+    function showStatus(text, className) {
+      const el = document.getElementById('status');
+      el.textContent = text;
+      el.className = className;
     }
-  };
-</script>
+  </script>
 </body>
 </html>
