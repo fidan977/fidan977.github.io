@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Список страниц</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    h1 { color: #333; }
+    #loading { color: #666; font-style: italic; }
+    #error { color: #c00; background: #ffe6e6; padding: 10px; border-radius: 5px; display: none; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 8px 0; }
+    a { color: #0366d6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta { color: #888; font-size: 0.9em; margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <h1>📄 Страницы сайта</h1>
+  
+  <div id="loading">Загрузка списка...</div>
+  <div id="error"></div>
+  <ul id="pagesList"></ul>
+
+  <script>
+    // ⚙️ НАСТРОЙКИ (отредактируйте под себя)
+    const CONFIG = {
+      owner: 'fidan977',              // Ваш логин на GitHub
+      repo: 'fidan977.github.io',     // Имя репозитория (обычно как домен)
+      path: '',                       // Папка внутри репо (пусто = корень)
+      branch: 'main',                 // Ветка: 'main' или 'master'
+      extensions: ['.html', '.htm']   // Какие файлы показывать
+    };
+
+    // 🚀 Основная функция
+    async function loadPagesList() {
+      const loading = document.getElementById('loading');
+      const error = document.getElementById('error');
+      const list = document.getElementById('pagesList');
+
+      try {
+        // Формируем URL GitHub API
+        const apiUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}?ref=${CONFIG.branch}`;
+        
+        // Делаем запрос
+        const response = await fetch(apiUrl, {
+          headers: { 'Accept': 'application/vnd.github.v3+json' }
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.message || `Ошибка ${response.status}`);
+        }
+
+        const files = await response.json();
+
+        // Фильтруем: только файлы с нужными расширениями
+        const pages = files
+          .filter(item => 
+            item.type === 'file' && 
+            CONFIG.extensions.some(ext => item.name.toLowerCase().endsWith(ext))
+          )
+          .map(file => ({
+            name: file.name,
+            url: `/${CONFIG.path}${CONFIG.path && !CONFIG.path.endsWith('/') ? '/' : ''}${file.name}`,
+            size: formatBytes(file.size),
+            updated: new Date(file.sha).toLocaleDateString('ru-RU') // sha ≠ дата, но для примера сойдет
+          }));
+
+        // Показываем результат
+        loading.style.display = 'none';
+        
+        if (pages.length === 0) {
+          list.innerHTML = '<li>📭 Файлы не найдены</li>';
+        } else {
+          pages.forEach(page => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+              <a href="${page.url}" target="_blank">📄 ${page.name}</a>
+              <span class="meta">${page.size}</span>
+            `;
+            list.appendChild(li);
+          });
+        }
+
+      } catch (err) {
+        loading.style.display = 'none';
+        error.textContent = `❌ Ошибка: ${err.message}`;
+        error.style.display = 'block';
+        console.error('GitHub API Error:', err);
+      }
+    }
+
+    // Вспомогательная: форматирование размера файла
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // Запускаем после загрузки страницы
+    document.addEventListener('DOMContentLoaded', loadPagesList);
+  </script>
+</body>
+</html>
