@@ -3,27 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
     <title>Вход в систему</title>
+    
+    <!-- 🔹 Библиотека Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; }
-        .card { background: white; padding: 40px 30px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 420px; text-align: center; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            padding: 20px; 
+        }
+        .card { 
+            background: white; padding: 40px 30px; border-radius: 16px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+            width: 100%; max-width: 420px; text-align: center; 
+        }
         .card h2 { margin-bottom: 25px; color: #333; }
-        #g_id_onload { display: none; }
-        .g_id_signin { margin: 0 auto; }
-        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 28px; height: 28px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Контейнер для кнопки */
+        #g_id_signin { margin: 0 auto; min-height: 40px; }
+        
+        .loader { 
+            border: 3px solid #f3f3f3; border-top: 3px solid #667eea; 
+            border-radius: 50%; width: 28px; height: 28px; 
+            animation: spin 1s linear infinite; margin: 20px auto; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        
         .error { color: #e74c3c; margin-top: 15px; font-size: 14px; min-height: 20px; line-height: 1.4; }
         .success { color: #27ae60; font-weight: 600; margin-bottom: 10px; }
         .hidden { display: none !important; }
-        #user-avatar { width: 90px; height: 90px; border-radius: 50%; margin: 15px auto; display: block; border: 3px solid #667eea; object-fit: cover; }
+        
+        #user-avatar { 
+            width: 90px; height: 90px; border-radius: 50%; 
+            margin: 15px auto; display: block; 
+            border: 3px solid #667eea; object-fit: cover; 
+        }
         #user-name { font-size: 18px; font-weight: 600; color: #333; margin: 10px 0 5px; }
         #user-email { color: #666; font-size: 14px; margin-bottom: 20px; word-break: break-all; }
-        button { background: #e74c3c; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s; }
+        
+        button { 
+            background: #e74c3c; color: white; border: none; 
+            padding: 12px 24px; border-radius: 8px; cursor: pointer; 
+            font-size: 14px; font-weight: 500; transition: background 0.2s; 
+        }
         button:hover { background: #c0392b; }
+        
         .footer { margin-top: 25px; font-size: 12px; color: #999; }
         .footer a { color: #667eea; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -31,21 +67,16 @@
 <div class="card">
     <h2>🔐 Вход в систему</h2>
     
+    <!-- Секция входа -->
     <div id="login-section">
-        <div id="g_id_onload"
-             data-client_id="461200840639-bup0mjs0lji7cr1lbbd49poc2t78ua4n.apps.googleusercontent.com"
-             data-callback="handleGoogleResponse"
-             data-auto_prompt="false"
-             data-ux_mode="popup">
-        </div>
-        <div class="g_id_signin"
-             data-type="standard" data-size="large" data-theme="outline"
-             data-text="signin_with" data-shape="rectangular" data-logo_alignment="left">
-        </div>
+        <!-- 🔹 Контейнер для кнопки (без data-атрибутов!) -->
+        <div id="g_id_signin"></div>
+        
         <div class="loader hidden" id="loader"></div>
         <div class="error" id="error-msg"></div>
     </div>
 
+    <!-- Секция успеха (скрыта по умолчанию) -->
     <div id="success-section" class="hidden">
         <p class="success">✓ Доступ разрешён</p>
         <img id="user-avatar" src="" alt="Avatar">
@@ -56,95 +87,169 @@
     
     <div class="footer">
         Защищено Google OAuth • 
-        <a href="https://fidan977.github.io" target="_blank">На главную</a>
+        <a href="https://fidan977.github.io/" target="_blank">На главную</a>
     </div>
 </div>
 
 <script>
-    // 🔥 ВАША ССЫЛКА НА APPS SCRIPT (уже вставлена)
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2aRa9DublmfWlurh2LJipC895VQd8HRvkhFMDYlWuBNypq_fEgIRDruVeCLey0lsG_g/exec';
+    // 🔥 ВАША ССЫЛКА НА APPS SCRIPT (без пробелов!)
+    // Скопируйте новую ссылку после развертывания
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz17gn2JxsR6IwPCKonUudB9FfrP5fllJms4k0myStaYfws4gB10UHyHSVJyug9HjmkTQ/exec';
 
+    /**
+     * Обработчик успешного входа через Google
+     * @param {Object} response - объект с токеном от Google
+     */
     function handleGoogleResponse(response) {
         const idToken = response.credential;
         
+        // Показываем индикатор загрузки
         document.getElementById('loader').classList.remove('hidden');
         document.getElementById('error-msg').textContent = '';
-        document.querySelector('.g_id_signin').style.opacity = '0.6';
-        document.querySelector('.g_id_signin').style.pointerEvents = 'none';
         
-        // 🔐 Отправляем параметры через URL-encoded (не JSON!)
+        // Блокируем кнопку, чтобы избежать повторных кликов
+        const signinBtn = document.querySelector('.g_id_signin');
+        if (signinBtn) {
+            signinBtn.style.opacity = '0.6';
+            signinBtn.style.pointerEvents = 'none';
+        }
+        
+        // Готовим данные для отправки (URL-encoded, как любит Apps Script)
         const params = new URLSearchParams();
         params.append('action', 'checkAccess');
         params.append('token', idToken);
         
-        fetch(SCRIPT_URL, {
+        // 🔹 Отправляем запрос на сервер
+        fetch(SCRIPT_URL.trim(), {
             method: 'POST',
-            body: params  // Отправляем как form data
-            // ❌ Без headers: Content-Type — браузер сам поставит application/x-www-form-urlencoded
+            body: params,
+            mode: 'cors',              // Разрешаем CORS
+            credentials: 'omit',       // Не отправляем куки
+            headers: { 'Accept': 'application/json' }
         })
-        .then(res => {
+        .then(async res => {
+            // Проверяем, что сервер вернул JSON
+            const contentType = res.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await res.text();
+                console.error('Non-JSON response:', text);
+                throw new Error('Сервер вернул некорректный ответ');
+            }
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.json();
         })
         .then(data => {
+            // Скрываем лоадер, разблокируем кнопку
             document.getElementById('loader').classList.add('hidden');
-            document.querySelector('.g_id_signin').style.opacity = '1';
-            document.querySelector('.g_id_signin').style.pointerEvents = 'auto';
+            if (signinBtn) {
+                signinBtn.style.opacity = '1';
+                signinBtn.style.pointerEvents = 'auto';
+            }
             
             if (data.success) {
+                // ✅ Распаковываем токен и показываем данные пользователя
                 const userInfo = JSON.parse(atob(idToken.split('.')[1]));
                 showSuccess(userInfo);
             } else {
+                // ❌ Показываем ошибку от сервера
                 document.getElementById('error-msg').textContent = '❌ ' + (data.message || 'Доступ запрещён');
             }
         })
         .catch(err => {
+            // Обработка сетевых ошибок
             document.getElementById('loader').classList.add('hidden');
-            document.querySelector('.g_id_signin').style.opacity = '1';
-            document.querySelector('.g_id_signin').style.pointerEvents = 'auto';
-            document.getElementById('error-msg').textContent = '❌ Ошибка соединения';
+            if (signinBtn) {
+                signinBtn.style.opacity = '1';
+                signinBtn.style.pointerEvents = 'auto';
+            }
+            document.getElementById('error-msg').textContent = '❌ Ошибка: ' + err.message;
             console.error('Fetch error:', err);
         });
     }
 
+    /**
+     * Показывает интерфейс успешного входа
+     * @param {Object} user - данные пользователя из токена
+     */
     function showSuccess(user) {
         document.getElementById('login-section').classList.add('hidden');
         document.getElementById('success-section').classList.remove('hidden');
+        
         document.getElementById('user-name').textContent = user.name;
         document.getElementById('user-email').textContent = user.email;
         document.getElementById('user-avatar').src = user.picture || 'https://via.placeholder.com/90?text=👤';
-        localStorage.setItem('authUser', JSON.stringify({ email: user.email, name: user.name, picture: user.picture, loginTime: Date.now() }));
+        
+        // 🔹 Сохраняем сессию в localStorage (24 часа)
+        localStorage.setItem('authUser', JSON.stringify({
+            email: user.email,
+            name: user.name,
+            picture: user.picture,
+            loginTime: Date.now()
+        }));
     }
 
+    /**
+     * Выход из системы
+     */
     function logout() {
         localStorage.removeItem('authUser');
+        
+        // Отключаем авто-выбор аккаунта
         if (window.google?.accounts?.id) {
             google.accounts.id.disableAutoSelect();
         }
+        
+        // Перезагружаем страницу
         location.reload();
     }
 
+    /**
+     * Инициализация при загрузке страницы
+     */
     window.onload = function() {
+        // 🔹 1. Проверяем сохранённую сессию
         const saved = localStorage.getItem('authUser');
         if (saved) {
             try {
                 const user = JSON.parse(saved);
-                const maxAge = 24 * 60 * 60 * 1000;
+                const maxAge = 24 * 60 * 60 * 1000; // 24 часа
+                
+                // Если сессия ещё действительна — показываем успех сразу
                 if (Date.now() - user.loginTime < maxAge) {
                     showSuccess(user);
-                    return;
+                    return; // ❗ Выходим, не инициализируем кнопку
                 }
-            } catch(e) { localStorage.removeItem('authUser'); }
+            } catch(e) { 
+                localStorage.removeItem('authUser'); 
+            }
         }
+        
+        // 🔹 2. ЕДИНСТВЕННАЯ инициализация Google Sign-In
         if (window.google?.accounts?.id) {
             google.accounts.id.initialize({
                 client_id: "461200840639-bup0mjs0lji7cr1lbbd49poc2t78ua4n.apps.googleusercontent.com",
-                callback: handleGoogleResponse
+                callback: handleGoogleResponse,
+                ux_mode: "redirect",      // 🔧 КРИТИЧНО: redirect вместо popup (решает COOP-ошибку)
+                auto_select: false,
+                context: "signin"
             });
+            
             google.accounts.id.renderButton(
-                document.querySelector('.g_id_signin'),
-                { theme: "outline", size: "large", text: "signin_with", shape: "rectangular" }
+                document.getElementById('g_id_signin'),
+                { 
+                    theme: "outline", 
+                    size: "large", 
+                    text: "signin_with", 
+                    shape: "rectangular",
+                    logo_alignment: "left"
+                }
             );
+            
+            // Опционально: показать подсказку для повторного входа
+            // google.accounts.id.prompt();
+        } else {
+            console.error('Google Identity Services не загрузился');
+            document.getElementById('error-msg').textContent = '❌ Ошибка загрузки Google SDK';
         }
     };
 </script>
