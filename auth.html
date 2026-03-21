@@ -100,72 +100,22 @@
      * Обработчик успешного входа через Google
      * @param {Object} response - объект с токеном от Google
      */
-    function handleGoogleResponse(response) {
-        const idToken = response.credential;
-        
-        // Показываем индикатор загрузки
-        document.getElementById('loader').classList.remove('hidden');
-        document.getElementById('error-msg').textContent = '';
-        
-        // Блокируем кнопку, чтобы избежать повторных кликов
-        const signinBtn = document.querySelector('.g_id_signin');
-        if (signinBtn) {
-            signinBtn.style.opacity = '0.6';
-            signinBtn.style.pointerEvents = 'none';
-        }
-        
-        // Готовим данные для отправки (URL-encoded, как любит Apps Script)
-        const params = new URLSearchParams();
-        params.append('action', 'checkAccess');
-        params.append('token', idToken);
-        
-        // 🔹 Отправляем запрос на сервер
-        fetch(SCRIPT_URL.trim(), {
-            method: 'POST',
-            body: params,
-            mode: 'cors',              // Разрешаем CORS
-            credentials: 'omit',       // Не отправляем куки
-            headers: { 'Accept': 'application/json' }
-        })
-        .then(async res => {
-            // Проверяем, что сервер вернул JSON
-            const contentType = res.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await res.text();
-                console.error('Non-JSON response:', text);
-                throw new Error('Сервер вернул некорректный ответ');
-            }
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return res.json();
-        })
-        .then(data => {
-            // Скрываем лоадер, разблокируем кнопку
-            document.getElementById('loader').classList.add('hidden');
-            if (signinBtn) {
-                signinBtn.style.opacity = '1';
-                signinBtn.style.pointerEvents = 'auto';
-            }
-            
-            if (data.success) {
-                // ✅ Распаковываем токен и показываем данные пользователя
-                const userInfo = JSON.parse(atob(idToken.split('.')[1]));
-                showSuccess(userInfo);
-            } else {
-                // ❌ Показываем ошибку от сервера
-                document.getElementById('error-msg').textContent = '❌ ' + (data.message || 'Доступ запрещён');
-            }
-        })
-        .catch(err => {
-            // Обработка сетевых ошибок
-            document.getElementById('loader').classList.add('hidden');
-            if (signinBtn) {
-                signinBtn.style.opacity = '1';
-                signinBtn.style.pointerEvents = 'auto';
-            }
-            document.getElementById('error-msg').textContent = '❌ Ошибка: ' + err.message;
-            console.error('Fetch error:', err);
-        });
-    }
+function handleGoogleResponse(response) {
+    const idToken = response.credential;
+    
+    // Показываем индикатор загрузки
+    document.getElementById('loader')?.classList.remove('hidden');
+    
+    // 🔹 МГНОВЕННЫЙ РЕДИРЕКТ на скрипт через GET-параметры
+    // Кодируем токен для безопасной передачи в URL
+    const redirectUrl = SCRIPT_URL.trim() + 
+        '?action=checkAccess' +
+        '&token=' + encodeURIComponent(idToken) +
+        '&redirect=' + encodeURIComponent('https://fidan977.github.io/'); // Куда вернуться после успеха
+    
+    // Перенаправляем браузер — POST не нужен!
+    window.location.href = redirectUrl;
+}
 
     /**
      * Показывает интерфейс успешного входа
