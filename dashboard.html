@@ -3,201 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- 🛡️ CSP: Защита от XSS. Разрешаем скрипты/стили только с этого домена и inline -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
-    
+    <!-- 🛡️ CSP: Запрещаем загрузку внешних скриптов и стилей -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' ;">
     <title>Личный кабинет</title>
     <style>
+        :root { --primary: #4a90e2; --danger: #e74c3c; --success: #27ae60; --bg: #f8f9fa; --card: #ffffff; --text: #333333; --gray: #6c757d; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            background: #f8f9fa; color: #333; padding: 20px;
-        }
-        .container { max-width: 800px; margin: 0 auto; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 20px; min-height: 100vh; }
+        .container { max-width: 700px; margin: 0 auto; }
         
         /* Шапка */
-        .header { 
-            display: flex; justify-content: space-between; align-items: center;
-            background: white; padding: 15px 20px; border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px;
-        }
-        .header h2 { color: #667eea; font-size: 1.5rem; }
-        .logout-btn {
-            background: #dc3545; color: white; border: none;
-            padding: 8px 16px; border-radius: 8px; cursor: pointer;
-            font-weight: 500; transition: background 0.2s;
-        }
-        .logout-btn:hover { background: #c82333; }
+        header { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        header h1 { font-size: 1.4rem; color: var(--primary); }
+        #logoutBtn { background: var(--danger); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; transition: 0.2s; }
+        #logoutBtn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Карточки */
+        .card { background: var(--card); padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 15px; }
+        .card h2 { margin-bottom: 16px; font-size: 1.2rem; color: var(--gray); }
         
-        /* Карточки контента */
-        .info-card {
-            background: white; padding: 20px; border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 15px;
-        }
-        .info-card h3 { margin-bottom: 10px; color: #495057; }
-        .info-card ul { padding-left: 20px; line-height: 1.6; }
+        /* Строки информации */
+        .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: var(--gray); }
+        .info-value { font-weight: 500; }
         
-        /* Кнопки действий */
-        button.action-btn {
-            background: #28a745; color: white; border: none;
-            padding: 10px 20px; border-radius: 8px; cursor: pointer;
-            font-size: 15px; margin-top: 10px; transition: opacity 0.2s;
-        }
-        button.action-btn:hover { opacity: 0.9; }
-        
-        /* Состояния загрузки и ошибок */
-        .loading, .error { 
-            text-align: center; padding: 40px; background: white; 
-            border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        .error { color: #721c24; background: #f8d7da; border: 1px solid #f5c6cb; }
-        
-        /* Спиннер */
-        .spinner {
-            display: inline-block; width: 40px; height: 40px;
-            border: 4px solid rgba(102,126,234,0.2); border-radius: 50%;
-            border-top-color: #667eea; animation: spin 1s linear infinite; margin-bottom: 15px;
-        }
+        /* Бейджи ролей */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+        .badge.admin { background: #fff3cd; color: #856404; }
+        .badge.user { background: #d1ecf1; color: #0c5460; }
+
+        /* Состояния */
+        .loader, .error { text-align: center; padding: 40px; background: var(--card); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .error { color: var(--danger); background: #fdf2f2; border: 1px solid #fecaca; }
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(74,144,226,0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Шапка с кнопкой выхода -->
-        <div class="header">
-            <h2>🔐 Личный кабинет</h2>
-            <button class="logout-btn" onclick="logout()">Выйти</button>
-        </div>
+        <header>
+            <h1>🔐 Личный кабинет</h1>
+            <button id="logoutBtn">Выйти</button>
+        </header>
 
-        <!-- Сюда будет вставлен защищенный HTML с сервера -->
-        <div id="content-area">
-            <div class="loading">
+        <main id="content">
+            <div class="loader">
                 <div class="spinner"></div>
-                <p>Проверка безопасности и загрузка данных...</p>
+                <p>Проверка сессии и загрузка данных...</p>
             </div>
-        </div>
+        </main>
     </div>
 
     <script>
-        // 🎯 Ваш URL веб-приложения Google Apps Script
+        // 🎯 Ваш URL веб-приложения
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyKJCKwghqQad9lWxJSr6lHoyYN_8uqg0fDy5wI3qiaywFm2948hxTXCZhLwCfZRRzY/exec';
 
-        // 1. При загрузке страницы проверяем сессию
-        window.addEventListener('load', async () => {
+        // 1. Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', async () => {
             const sessionStr = localStorage.getItem('authSession');
-            
-            if (!sessionStr) {
-                redirectLogin("Нет активной сессии");
-                return;
-            }
+            if (!sessionStr) return redirectLogin();
 
             let session;
-            try {
-                session = JSON.parse(sessionStr);
-            } catch (e) {
-                console.error("Ошибка чтения сессии", e);
-                redirectLogin("Поврежденная сессия");
-                return;
-            }
-
-            // Проверяем наличие обязательных полей
-            if (!session.token || !session.username) {
-                redirectLogin("Неполные данные сессии");
-                return;
-            }
-
-            console.log("Инициализация кабинета для:", session.username);
+            try { session = JSON.parse(sessionStr); } catch { return redirectLogin(); }
             
-            // Загружаем контент
+            if (!session.token || !session.username) return redirectLogin();
+
             await loadDashboard(session.token, session.username);
         });
 
-        // 2. Основная функция загрузки защищенного HTML
+        // 2. Запрос данных с сервера
         async function loadDashboard(token, username) {
-            const container = document.getElementById('content-area');
+            const content = document.getElementById('content');
             
             try {
+                // ❗ Без headers: { 'Content-Type': 'application/json' } чтобы избежать CORS preflight
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({ 
                         action: "getDashboard", 
-                        token: token,
-                        username: username // Двойная проверка на сервере
-                    })
-                });
-                
-                const result = await res.json();
-
-                if (result.success) {
-                    // ✅ Вставляем безопасный HTML, полученный с сервера
-                    container.innerHTML = result.html;
-                    
-                    // Делаем функцию loadMoreData доступной глобально для onclick в HTML
-                    // Передаем туда текущие credentials через замыкание
-                    window.loadMoreData = () => loadMoreData(token, username);
-                } else {
-                    // ❌ Ошибка (токен невалиден, истек или бан)
-                    container.innerHTML = `<div class="error">❌ ${result.message}</div>`;
-                    
-                    // Если сервер сказал редиректить — делаем это через 2 сек
-                    if (result.redirect) {
-                        setTimeout(() => redirectLogin("Сессия завершена"), 2000);
-                    }
-                }
-            } catch (err) {
-                console.error("Fetch error:", err);
-                container.innerHTML = `<div class="error">🌐 Ошибка сети. Проверьте интернет.</div>`;
-            }
-        }
-
-        // 3. Подгрузка дополнительных данных (пример динамического запроса)
-        async function loadMoreData(token, username) {
-            const container = document.getElementById('dynamic-content');
-            if (!container) return;
-            
-            container.innerHTML = '<p style="text-align:center;color:#666; margin-top:10px;">⏳ Загрузка...</p>';
-            
-            try {
-                const res = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ 
-                        action: "loadMoreData", 
-                        token: token,
+                        token: token, 
                         username: username 
                     })
                 });
+
                 const result = await res.json();
-                
-                if (result.success) {
-                    container.innerHTML += result.html;
-                } else {
-                    container.innerHTML = `<p style="color:red; margin-top:10px;">❌ ${result.message}</p>`;
+
+                if (!result.success) {
+                    if (result.redirect) {
+                        setTimeout(redirectLogin, 1500);
+                        throw new Error('Сессия недействительна. Перенаправление...');
+                    }
+                    throw new Error(result.message || 'Ошибка авторизации');
                 }
+
+                // ✅ Успех: рендерим интерфейс
+                renderDashboard(result);
+
             } catch (err) {
-                container.innerHTML = '<p style="color:red; margin-top:10px;">🌐 Ошибка при загрузке</p>';
+                console.error('📡 Dashboard Error:', err);
+                content.innerHTML = `<div class="error">❌ ${err.message}<br><small>Откройте консоль (F12) для деталей</small></div>`;
             }
         }
 
-        // 4. Выход из системы
-        async function logout() {
+        // 3. Безопасный рендеринг (XSS-proof)
+        function renderDashboard(data) {
+            const content = document.getElementById('content');
+            content.innerHTML = ''; // Очистка спиннера
+
+            const mainCard = document.createElement('div');
+            mainCard.className = 'card';
+            mainCard.innerHTML = `
+                <h2>👋 Добро пожаловать!</h2>
+                <div class="info-row">
+                    <span class="info-label">Пользователь:</span>
+                    <span class="info-value" id="dispUser">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Роль:</span>
+                    <span class="info-value" id="dispRole">—</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Время сервера:</span>
+                    <span class="info-value" id="dispTime">—</span>
+                </div>
+            `;
+            content.appendChild(mainCard);
+
+            // 🔒 Безопасная вставка через textContent (никакого innerHTML для данных!)
+            document.getElementById('dispUser').textContent = data.username || '—';
+            document.getElementById('dispTime').textContent = data.serverTime || '—';
+
+            // Рендер роли с бейджем
+            const roleContainer = document.getElementById('dispRole');
+            const badge = document.createElement('span');
+            badge.className = `badge ${data.role === 'admin' ? 'admin' : 'user'}`;
+            badge.textContent = data.role === 'admin' ? '👑 Администратор' : '👤 Пользователь';
+            roleContainer.innerHTML = '';
+            roleContainer.appendChild(badge);
+        }
+
+        // 4. Выход
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
             const session = JSON.parse(localStorage.getItem('authSession') || '{}');
-            
-            // Пытаемся очистить токен на сервере (даже если ошибка — все равно выходим локально)
             if (session.token) {
                 fetch(GAS_URL, { 
                     method: 'POST', 
                     body: JSON.stringify({ action: "logout", token: session.token }) 
-                }).catch(() => {}); 
+                }).catch(() => {}); // Игнорируем ошибки сети при выходе
             }
-            
-            localStorage.removeItem('authSession');
-            window.location.href = 'auth.html';
-        }
+            redirectLogin();
+        });
 
-        // Утилита для редиректа
-        function redirectLogin(reason) {
-            console.warn("Redirecting to login:", reason);
+        // 5. Утилита редиректа
+        function redirectLogin() {
             localStorage.removeItem('authSession');
             window.location.href = 'auth.html';
         }
