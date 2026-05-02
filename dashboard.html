@@ -105,17 +105,17 @@
         });
 
         // Загрузка контента с сервера
-        async function loadDashboardContent(token) {
-            const contentArea = document.getElementById('content-area');
-            
-            try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ 
-                        action: "getDashboard", 
-                        token: token 
-                    })
-                });
+        async function loadDashboard(token) {
+    const session = JSON.parse(localStorage.getItem('authSession'));
+    
+    const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ 
+            action: "getDashboard", 
+            token: token,
+            username: session.username // <--- ОБЯЗАТЕЛЬНО ОТПРАВЛЯЕМ ЛОГИН
+        })
+    });
 
                 const result = await response.json();
 
