@@ -3,126 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход в систему</title>
+    <title>Авторизация</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; }
-        .login-container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #ccc; }
-        .message { margin-top: 10px; text-align: center; font-size: 0.9em; }
-        .error { color: red; }
-        .success { color: green; }
-        #dashboard { display: none; text-align: center; }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container { 
+            background: white; 
+            padding: 2rem; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+            width: 100%;
+            max-width: 350px; 
+        }
+        h2 { text-align: center; margin: 0 0 1.5rem; color: #333; }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 8px 0; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 6px; 
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus { outline: none; border-color: #667eea; }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            margin-top: 10px;
+        }
+        button:hover { transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+        .message { 
+            margin-top: 12px; 
+            text-align: center; 
+            font-size: 14px; 
+            min-height: 20px;
+        }
+        .error { color: #d32f2f; }
+        .success { color: #388e3c; }
+        .hidden { display: none !important; }
+        .dashboard-info { text-align: center; line-height: 1.8; }
+        .dashboard-info strong { color: #667eea; }
+        .logout-btn { background: #f44336; margin-top: 20px; }
+        .logout-btn:hover { background: #d32f2f; }
+        .loader {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+    <div class="container">
+        <!-- Форма входа -->
+        <div id="loginView">
+            <h2>🔐 Вход</h2>
+            <input type="text" id="username" placeholder="Логин" autocomplete="username">
+            <input type="password" id="password" placeholder="Пароль" autocomplete="current-password">
+            <button onclick="login()" id="loginBtn">Войти</button>
+            <div class="message" id="message"></div>
+        </div>
 
-    <!-- Форма входа -->
-    <div class="login-container" id="loginForm">
-        <h2 style="text-align: center;">Вход</h2>
-        <input type="text" id="username" placeholder="Логин" required>
-        <input type="password" id="password" placeholder="Пароль" required>
-        <button onclick="login()" id="btnLogin">Войти</button>
-        <div class="message" id="message"></div>
-    </div>
-
-    <!-- Панель управления (показывается после входа) -->
-    <div class="login-container" id="dashboard">
-        <h2>Добро пожаловать!</h2>
-        <p>Вы вошли как: <span id="userDisplay"></span></p>
-        <p>Роль: <span id="roleDisplay"></span></p>
-        <button onclick="logout()">Выйти</button>
+        <!-- Панель после входа -->
+        <div id="dashboardView" class="hidden">
+            <h2>✅ Успешно!</h2>
+            <div class="dashboard-info">
+                <p>Пользователь: <strong id="userDisplay">—</strong></p>
+                <p>Роль: <strong id="roleDisplay">—</strong></p>
+                <p><small>Токен: <span id="tokenDisplay" style="word-break: break-all;">—</span></small></p>
+            </div>
+            <button class="logout-btn" onclick="logout()">Выйти</button>
+        </div>
     </div>
 
     <script>
-        // ВСТАВЬТЕ СЮДА ВАШ URL WEB APP ИЗ GOOGLE APPS SCRIPT
+        // 🎯 ВАШ URL веб-приложения Google Apps Script
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyKJCKwghqQad9lWxJSr6lHoyYN_8uqg0fDy5wI3qiaywFm2948hxTXCZhLwCfZRRzY/exec';
 
-        // Проверка, есть ли сохраненная сессия при загрузке
-        window.onload = function() {
-            const session = localStorage.getItem('authSession');
-            if (session) {
-                const data = JSON.parse(session);
-                showDashboard(data);
+        // Проверка сессии при загрузке
+        window.addEventListener('load', () => {
+            const saved = localStorage.getItem('authSession');
+            if (saved) {
+                try {
+                    const session = JSON.parse(saved);
+                    // Опционально: проверить время жизни сессии
+                    showDashboard(session);
+                } catch(e) {
+                    localStorage.removeItem('authSession');
+                }
             }
-        };
+        });
 
         async function login() {
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            const btn = document.getElementById('btnLogin');
-            const msgDiv = document.getElementById('message');
+            const btn = document.getElementById('loginBtn');
+            const msg = document.getElementById('message');
 
             if (!username || !password) {
-                showMessage("Введите логин и пароль", "error");
+                showMessage('⚠️ Введите логин и пароль', 'error');
                 return;
             }
 
+            // UI: состояние загрузки
             btn.disabled = true;
-            btn.innerText = "Проверка...";
-            showMessage("", "");
+            btn.innerHTML = '<span class="loader"></span>Проверка...';
+            showMessage('', '');
 
             try {
-                // Используем fetch с mode: 'no-cors' нельзя для получения JSON ответа.
-                // Google Apps Script поддерживает CORS, если правильно настроить ответ.
-                // Мы отправляем POST запрос с JSON телом.
-                
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ username: username, password: password })
-                    // Важно: не устанавливайте Content-Type header вручную, 
-                    // браузер сам поставит text/plain;charset=UTF-8 для простоты, 
-                    // а GAS разберет тело через e.postData.contents
+                    // Google Apps Script принимает JSON в postData.contents
+                    body: JSON.stringify({ username, password })
+                    // Не указываем Content-Type явно — браузер поставит text/plain,
+                    // что позволяет избежать preflight CORS-запроса
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    // Сохраняем сессию локально
-                    const sessionData = {
-                        username: username,
-                        role: result.role,
+                    const session = {
+                        username: result.username || username,
+                        role: result.role || 'user',
                         token: result.token,
-                        loginTime: new Date().toISOString()
+                        loggedInAt: new Date().toISOString()
                     };
-                    localStorage.setItem('authSession', JSON.stringify(sessionData));
-                    showDashboard(sessionData);
+                    localStorage.setItem('authSession', JSON.stringify(session));
+                    showDashboard(session);
+                    showMessage('✓ Авторизация успешна!', 'success');
                 } else {
-                    showMessage(result.message, "error");
+                    showMessage('❌ ' + (result.message || 'Ошибка авторизации'), 'error');
                 }
-
             } catch (error) {
-                console.error(error);
-                showMessage("Ошибка соединения с сервером", "error");
+                console.error('Fetch error:', error);
+                showMessage('🌐 Ошибка сети или сервера', 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Войти";
+                btn.textContent = 'Войти';
             }
         }
 
-        function showDashboard(data) {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('userDisplay').innerText = data.username;
-            document.getElementById('roleDisplay').innerText = data.role;
+        function showDashboard(session) {
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('dashboardView').classList.remove('hidden');
+            document.getElementById('userDisplay').textContent = session.username;
+            document.getElementById('roleDisplay').textContent = session.role;
+            document.getElementById('tokenDisplay').textContent = session.token?.substring(0, 20) + '...';
         }
 
         function logout() {
             localStorage.removeItem('authSession');
-            document.getElementById('dashboard').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('dashboardView').classList.add('hidden');
+            document.getElementById('loginView').classList.remove('hidden');
             document.getElementById('username').value = '';
             document.getElementById('password').value = '';
-            showMessage("", "");
+            document.getElementById('message').textContent = '';
         }
 
         function showMessage(text, type) {
-            const msgDiv = document.getElementById('message');
-            msgDiv.innerText = text;
-            msgDiv.className = "message " + type;
+            const el = document.getElementById('message');
+            el.textContent = text;
+            el.className = 'message ' + type;
         }
+
+        // Поддержка Enter в полях ввода
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
     </script>
 </body>
 </html>
