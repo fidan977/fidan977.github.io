@@ -1,105 +1,128 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Отправка в Telegram</title>
-  <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
-    input, textarea { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; }
-    button { background: #0088cc; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 4px; }
-    button:hover { background: #0077b5; }
-    #status { margin-top: 20px; padding: 10px; border-radius: 4px; }
-    .success { background: #d4edda; color: #155724; }
-    .error { background: #f8d7da; color: #721c24; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; }
+        .login-container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; }
+        .message { margin-top: 10px; text-align: center; font-size: 0.9em; }
+        .error { color: red; }
+        .success { color: green; }
+        #dashboard { display: none; text-align: center; }
+    </style>
 </head>
 <body>
 
-  <h2>📤 Отправить данные в Telegram</h2>
-  
-  <label>Ваше имя:</label>
-  <input type="text" id="name" placeholder="Иван">
-  
-  <label>Сообщение:</label>
-  <textarea id="message" rows="4" placeholder="Текст сообщения..."></textarea>
-  
-  <label>Доп. параметры (JSON, необязательно):</label>
-  <textarea id="extra" rows="3" placeholder='{"order_id": 123, "status": "new"}'></textarea>
-  
-  <button onclick="sendData()">🚀 Отправить</button>
-  
-  <div id="status"></div>
+    <!-- Форма входа -->
+    <div class="login-container" id="loginForm">
+        <h2 style="text-align: center;">Вход</h2>
+        <input type="text" id="username" placeholder="Логин" required>
+        <input type="password" id="password" placeholder="Пароль" required>
+        <button onclick="login()" id="btnLogin">Войти</button>
+        <div class="message" id="message"></div>
+    </div>
 
-  <script>
-    // 🔥 Замените на ваш опубликованный URL веб-приложения
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2aRa9DublmfWlurh2LJipC895VQd8HRvkhFMDYlWuBNypq_fEgIRDruVeCLey0lsG_g/exec';
+    <!-- Панель управления (показывается после входа) -->
+    <div class="login-container" id="dashboard">
+        <h2>Добро пожаловать!</h2>
+        <p>Вы вошли как: <span id="userDisplay"></span></p>
+        <p>Роль: <span id="roleDisplay"></span></p>
+        <button onclick="logout()">Выйти</button>
+    </div>
 
-    async function sendData() {
-      const statusDiv = document.getElementById('status');
-      const name = document.getElementById('name').value.trim();
-      const message = document.getElementById('message').value.trim();
-      const extraRaw = document.getElementById('extra').value.trim();
-      
-      // Валидация
-      if (!name || !message) {
-        showStatus('❌ Заполните имя и сообщение', 'error');
-        return;
-      }
+    <script>
+        // ВСТАВЬТЕ СЮДА ВАШ URL WEB APP ИЗ GOOGLE APPS SCRIPT
+        const GAS_URL = 'https://script.google.com/macros/s/ВАШ_ДЛИННЫЙ_ID/exec';
 
-      // Парсим доп. параметры
-      let extra = {};
-      if (extraRaw) {
-        try {
-          extra = JSON.parse(extraRaw);
-        } catch (e) {
-          showStatus('❌ Ошибка в JSON параметров: ' + e.message, 'error');
-          return;
+        // Проверка, есть ли сохраненная сессия при загрузке
+        window.onload = function() {
+            const session = localStorage.getItem('authSession');
+            if (session) {
+                const data = JSON.parse(session);
+                showDashboard(data);
+            }
+        };
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btnLogin');
+            const msgDiv = document.getElementById('message');
+
+            if (!username || !password) {
+                showMessage("Введите логин и пароль", "error");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Проверка...";
+            showMessage("", "");
+
+            try {
+                // Используем fetch с mode: 'no-cors' нельзя для получения JSON ответа.
+                // Google Apps Script поддерживает CORS, если правильно настроить ответ.
+                // Мы отправляем POST запрос с JSON телом.
+                
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ username: username, password: password })
+                    // Важно: не устанавливайте Content-Type header вручную, 
+                    // браузер сам поставит text/plain;charset=UTF-8 для простоты, 
+                    // а GAS разберет тело через e.postData.contents
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Сохраняем сессию локально
+                    const sessionData = {
+                        username: username,
+                        role: result.role,
+                        token: result.token,
+                        loginTime: new Date().toISOString()
+                    };
+                    localStorage.setItem('authSession', JSON.stringify(sessionData));
+                    showDashboard(sessionData);
+                } else {
+                    showMessage(result.message, "error");
+                }
+
+            } catch (error) {
+                console.error(error);
+                showMessage("Ошибка соединения с сервером", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Войти";
+            }
         }
-      }
 
-      // Формируем payload
-      const payload = {
-        name: name,
-        message: message,
-        extra: extra,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        platform: /mobile/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
-      };
-
-      showStatus('⏳ Отправка...', '');
-
-      try {
-const response = await fetch(SCRIPT_URL, {
-  method: 'POST',
-  credentials: 'include',
-  headers: {
-    'Content-Type': 'text/plain',  // 🔥 Меняем на text/plain
-  },
-  body: JSON.stringify(payload)  // Данные всё ещё в JSON, просто заголовок другой
-});
-
-        // Google Apps Script может вернуть редирект — обрабатываем
-        const result = await response.json().catch(() => ({}));
-        
-        if (response.ok || result.status === 'ok') {
-          showStatus('✅ Сообщение отправлено!', 'success');
-          document.getElementById('message').value = ''; // Очистить поле
-        } else {
-          showStatus('❌ Ошибка: ' + (result.error || response.statusText), 'error');
+        function showDashboard(data) {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('userDisplay').innerText = data.username;
+            document.getElementById('roleDisplay').innerText = data.role;
         }
-      } catch (error) {
-        showStatus('❌ Сетевая ошибка: ' + error.message, 'error');
-        console.error('Fetch error:', error);
-      }
-    }
 
-    function showStatus(text, className) {
-      const el = document.getElementById('status');
-      el.textContent = text;
-      el.className = className;
-    }
-  </script>
+        function logout() {
+            localStorage.removeItem('authSession');
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            showMessage("", "");
+        }
+
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.innerText = text;
+            msgDiv.className = "message " + type;
+        }
+    </script>
 </body>
 </html>
