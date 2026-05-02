@@ -120,7 +120,6 @@
             try {
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }, // Явно указываем тип
                     body: JSON.stringify({ 
                         action: "getDashboard", 
                         token: token,
