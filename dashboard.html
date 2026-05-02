@@ -3,8 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 🛡️ CSP: Запрещаем загрузку внешних скриптов и стилей -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' ;">
+    
+    <!-- 🛡️ CSP: Разрешаем подключения к Google Apps Script -->
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' 'unsafe-inline'; 
+                   style-src 'self' 'unsafe-inline'; 
+                   img-src 'self' data:; 
+                   connect-src 'self' https://script.google.com https://*.googleusercontent.com;">
+    
     <title>Личный кабинет</title>
     <style>
         :root { --primary: #4a90e2; --danger: #e74c3c; --success: #27ae60; --bg: #f8f9fa; --card: #ffffff; --text: #333333; --gray: #6c757d; }
@@ -72,12 +79,12 @@
             await loadDashboard(session.token, session.username);
         });
 
-        // 2. Запрос данных с сервера
+        // 2. Запрос данных с сервера (БЕЗ HEADERS для избежания CORS Preflight)
         async function loadDashboard(token, username) {
             const content = document.getElementById('content');
             
             try {
-                // ❗ Без headers: { 'Content-Type': 'application/json' } чтобы избежать CORS preflight
+                // ❗ КРИТИЧНО: Никаких headers! Только method и body.
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({ 
@@ -87,12 +94,14 @@
                     })
                 });
 
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                
                 const result = await res.json();
-
+                
                 if (!result.success) {
                     if (result.redirect) {
                         setTimeout(redirectLogin, 1500);
-                        throw new Error('Сессия недействительна. Перенаправление...');
+                        throw new Error('Сессия недействительна');
                     }
                     throw new Error(result.message || 'Ошибка авторизации');
                 }
@@ -102,11 +111,14 @@
 
             } catch (err) {
                 console.error('📡 Dashboard Error:', err);
-                content.innerHTML = `<div class="error">❌ ${err.message}<br><small>Откройте консоль (F12) для деталей</small></div>`;
+                content.innerHTML = `<div class="error">
+                    ❌ ${err.message}<br>
+                    <small style="color:#666">F12 → Console/Network для деталей</small>
+                </div>`;
             }
         }
 
-        // 3. Безопасный рендеринг (XSS-proof)
+        // 3. Безопасный рендеринг (XSS-proof через textContent)
         function renderDashboard(data) {
             const content = document.getElementById('content');
             content.innerHTML = ''; // Очистка спиннера
@@ -130,7 +142,7 @@
             `;
             content.appendChild(mainCard);
 
-            // 🔒 Безопасная вставка через textContent (никакого innerHTML для данных!)
+            // 🔒 Безопасная вставка через textContent (никакого innerHTML для пользовательских данных!)
             document.getElementById('dispUser').textContent = data.username || '—';
             document.getElementById('dispTime').textContent = data.serverTime || '—';
 
