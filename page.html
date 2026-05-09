@@ -2,22 +2,23 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Client via Secure Gateway</title>
+    <title>Secure Session Client</title>
     <style>
         body { font-family: sans-serif; background: #eee; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; width: 100%; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; width: 100%; margin-top: 10px; }
         button:hover { background: #0056b3; }
-        #log { margin-top: 20px; padding: 10px; background: #f8f9fa; border: 1px solid #ddd; min-height: 50px; }
-        #content { margin-top: 20px; border-top: 2px solid #eee; padding-top: 20px; }
+        #log { margin-top: 20px; padding: 10px; background: #f8f9fa; border: 1px solid #ddd; min-height: 40px; font-size: 14px; }
+        #content { margin-top: 20px; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>🌐 Клиент (GitHub)</h1>
-    <p>Нажмите кнопку, чтобы отправить запрос через защищённый шлюз GAS.</p>
+    <h1>🔒 Клиент с Сессией</h1>
+    <p>Нажмите кнопку. Сессия будет сохранена в браузере.</p>
     
     <button onclick="sendRequest()">Отправить запрос</button>
+    <button onclick="resetSession()" style="background:#dc3545;">🗑 Сбросить сессию</button>
     
     <div id="log">Статус: Ожидание...</div>
     <div id="content"></div>
@@ -26,20 +27,21 @@
 <script>
     // Вставьте сюда URL вашего Web App из GAS
     const GAS_GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyKJCKwghqQad9lWxJSr6lHoyYN_8uqg0fDy5wI3qiaywFm2948hxTXCZhLwCfZRRzY/exec';
+    const SESSION_KEY = 'my_secure_session_id';
 
     async function sendRequest() {
         const log = document.getElementById('log');
         const content = document.getElementById('content');
         
-        log.innerText = 'Статус: Отправка запроса в шлюз...';
-        content.innerHTML = '';
-
+        log.innerText = 'Статус: Загрузка...';
+        
+        // 1. Берем текущий session_id из LocalStorage (если есть)
+        let currentSessionId = localStorage.getItem(SESSION_KEY);
+        
         try {
-            // Данные, которые мы хотим передать на сервер
             const payload = {
-                user: 'Admin',
-                action: 'get_dashboard',
-                timestamp: new Date().toISOString()
+                session_id: currentSessionId, // Отправляем ID (или null, если первый раз)
+                action: 'check_status'
             };
 
             const response = await fetch(GAS_GATEWAY_URL, {
@@ -50,15 +52,26 @@
             const result = await response.json();
 
             if (result.status === 'success') {
-                log.innerText = 'Статус: ✅ Успех! Данные получены через шлюз.';
-                // Вставляем HTML, который пришёл от PHP через GAS
+                // 2. Сохраняем новый session_id от сервера
+                if (result.data.session_id) {
+                    localStorage.setItem(SESSION_KEY, result.data.session_id);
+                    log.innerText = '✅ Успех. Сессия: ' + (result.data.is_new_session ? 'Новая' : 'Продолжена');
+                }
+                
+                // 3. Отрисовываем HTML
                 content.innerHTML = result.data.html_page;
             } else {
-                log.innerText = 'Статус: ❌ Ошибка: ' + result.message;
+                log.innerText = '❌ Ошибка: ' + result.message;
             }
         } catch (e) {
-            log.innerText = 'Статус: ❌ Сетевая ошибка: ' + e.message;
+            log.innerText = '❌ Сеть: ' + e.message;
         }
+    }
+
+    function resetSession() {
+        localStorage.removeItem(SESSION_KEY);
+        document.getElementById('content').innerHTML = '';
+        document.getElementById('log').innerText = '🗑 Сессия удалена. Следующий запрос создаст новую.';
     }
 </script>
 </body>
