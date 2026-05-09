@@ -2,78 +2,375 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Secure Session Client</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure App</title>
     <style>
-        body { font-family: sans-serif; background: #eee; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; width: 100%; margin-top: 10px; }
-        button:hover { background: #0056b3; }
-        #log { margin-top: 20px; padding: 10px; background: #f8f9fa; border: 1px solid #ddd; min-height: 40px; font-size: 14px; }
-        #content { margin-top: 20px; }
+        /* === БАЗОВЫЕ СТИЛИ === */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .app-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* === ШАПКА === */
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .app-header h1 { font-size: 1.4rem; font-weight: 600; }
+        .session-badge {
+            font-size: 0.75rem;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: monospace;
+        }
+
+        /* === НАВИГАЦИЯ === */
+        .nav-bar {
+            display: flex;
+            gap: 8px;
+            padding: 15px 25px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            overflow-x: auto;
+            flex-wrap: wrap;
+        }
+        .nav-btn {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .nav-btn.danger {
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+        .nav-btn.danger:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* === КОНТЕНТ === */
+        .content-area {
+            padding: 25px;
+            min-height: 400px;
+        }
+        .content-area h2 {
+            margin-bottom: 15px;
+            color: #2d3748;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            display: inline-block;
+        }
+        .content-area p { margin: 10px 0; }
+        .content-area code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        /* === СТАТУС И УВЕДОМЛЕНИЯ === */
+        .status-bar {
+            padding: 12px 25px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            font-size: 0.9rem;
+            color: #666;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+        }
+        .status-bar .success { color: #22c55e; font-weight: 500; }
+        .status-bar .error { color: #ef4444; font-weight: 500; }
+        .status-bar .loading { color: #667eea; }
+
+        /* === КНОПКИ ВНУТРИ КОНТЕНТА === */
+        .content-area button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px 5px 5px 0;
+            font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+        .content-area button:hover { background: #556cd6; }
+        .content-area button.secondary {
+            background: #64748b;
+        }
+        .content-area button.secondary:hover {
+            background: #475569;
+        }
+
+        /* === АДАПТИВНОСТЬ === */
+        @media (max-width: 600px) {
+            .app-header { flex-direction: column; gap: 10px; text-align: center; }
+            .nav-bar { padding: 10px 15px; }
+            .nav-btn { padding: 6px 12px; font-size: 0.85rem; }
+            .content-area { padding: 20px; }
+        }
+
+        /* === СКРЫТЫЕ ЭЛЕМЕНТЫ (пока не загрузились) === */
+        .hidden { display: none !important; }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>🔒 Клиент с Сессией (CORS Fix)</h1>
-    <p>Нажмите кнопку. Сессия будет сохранена в браузере.</p>
-    
-    <button onclick="sendRequest()">Отправить запрос</button>
-    <button onclick="resetSession()" style="background:#dc3545;">🗑 Сбросить сессию</button>
-    
-    <div id="log">Статус: Ожидание...</div>
-    <div id="content"></div>
+
+<div class="app-container">
+    <!-- Шапка -->
+    <header class="app-header">
+        <h1>🔐 Secure App</h1>
+        <div class="session-badge" id="sessionBadge">Сессия: —</div>
+    </header>
+
+    <!-- Навигация -->
+    <nav class="nav-bar">
+        <button class="nav-btn active" onclick="navigate('home')">🏠 Главная</button>
+        <button class="nav-btn" onclick="navigate('profile')">👤 Профиль</button>
+        <button class="nav-btn" onclick="navigate('stats')">📊 Статистика</button>
+        <button class="nav-btn" onclick="navigate('settings')">⚙️ Настройки</button>
+        <button class="nav-btn danger" onclick="logout()">🚪 Выйти</button>
+    </nav>
+
+    <!-- Область контента -->
+    <main class="content-area" id="contentArea">
+        <div style="text-align:center;color:#666;padding:40px;">
+            <div class="spinner"></div>
+            Загрузка...
+        </div>
+    </main>
+
+    <!-- Статус бар -->
+    <div class="status-bar" id="statusBar">
+        Готов к работе
+    </div>
 </div>
 
 <script>
-    // ⚠️ ВСТАВЬТЕ СЮДА ВАШ НОВЫЙ URL ПОСЛЕ ДЕПЛОЯ
+    // ========================================================================
+    // ⚙️ НАСТРОЙКИ (ОБЯЗАТЕЛЬНО ЗАПОЛНИТЕ!)
+    // ========================================================================
+    
+    // 🔗 ВСТАВЬТЕ СЮДА ВАШ АКТУАЛЬНЫЙ URL WEB APP ИЗ GOOGLE APPS SCRIPT
     const GAS_GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyKJCKwghqQad9lWxJSr6lHoyYN_8uqg0fDy5wI3qiaywFm2948hxTXCZhLwCfZRRzY/exec';
-    const SESSION_KEY = 'my_secure_session_id';
+    
+    // Ключ для localStorage
+    const SESSION_STORAGE_KEY = 'secure_session_token_v1';
 
-    async function sendRequest() {
-        const log = document.getElementById('log');
-        const content = document.getElementById('content');
+    // ========================================================================
+    // 🧠 ЯДРО ПРИЛОЖЕНИЯ
+    // ========================================================================
+
+    /**
+     * Основная функция отправки запроса на защищённый шлюз
+     */
+    async function sendRequest(templateName, extraParams = {}) {
+        const statusBar = document.getElementById('statusBar');
+        const contentArea = document.getElementById('contentArea');
         
-        log.innerText = 'Статус: Отправка... (Обход CORS)';
+        statusBar.innerHTML = '<span class="loading">⏳ Загрузка...</span>';
         
-        let currentSessionId = localStorage.getItem(SESSION_KEY);
+        // Получаем текущий session_id
+        const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
+        
+        // Формируем пакет данных
+        const payload = {
+            session_id: sessionId,
+            template: templateName,
+            timestamp: Date.now(),
+            ...extraParams
+        };
         
         try {
-            const payload = {
-                session_id: currentSessionId,
-                action: 'check_status'
-            };
-
-            // 🔑 FIX CORS: Мы НЕ указываем headers: { 'Content-Type': ... }
-            // Это заставляет браузер использовать "Simple Request" без preflight OPTIONS.
-            // GAS отлично понимает JSON в теле, даже если заголовок текстовый.
+            // 🔑 ОТПРАВКА ЗАПРОСА (без заголовков Content-Type для обхода CORS в GAS)
             const response = await fetch(GAS_GATEWAY_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload)
-                // Никаких headers!
+                // Важно: не указываем headers, чтобы браузер не слал OPTIONS preflight
             });
-
+            
             const result = await response.json();
-
+            
+            // Обработка ответа
             if (result.status === 'success') {
+                // Обновляем сессию, если сервер прислал новую
                 if (result.data.session_id) {
-                    localStorage.setItem(SESSION_KEY, result.data.session_id);
-                    log.innerText = '✅ Успех. Сессия: ' + (result.data.is_new_session ? 'Новая' : 'Продолжена');
+                    localStorage.setItem(SESSION_STORAGE_KEY, result.data.session_id);
+                    updateSessionBadge(result.data.session_id, result.data.is_new_session);
                 }
-                content.innerHTML = result.data.html_page;
+                
+                statusBar.innerHTML = `<span class="success">✅ Шаблон "${result.data.template_loaded}" загружен</span>`;
+                
+                // Вставляем полученный HTML
+                if (result.data.html_page) {
+                    contentArea.innerHTML = result.data.html_page;
+                    
+                    // Инициализируем кнопки внутри загруженного контента
+                    initContentButtons();
+                }
+                
+                return true;
             } else {
-                log.innerText = '❌ Ошибка логики: ' + result.message;
+                statusBar.innerHTML = `<span class="error">❌ Ошибка: ${result.message}</span>`;
+                contentArea.innerHTML = `<p style="color:#ef4444">Не удалось загрузить контент.<br><small>${result.message || 'Неизвестная ошибка'}</small></p>`;
+                
+                // Если сессия истекла — предлагаем переподключиться
+                if (result.message?.toLowerCase().includes('session') || result.message?.toLowerCase().includes('expired')) {
+                    contentArea.innerHTML += `<br><button onclick="navigate('${templateName}')">🔄 Попробовать снова</button>`;
+                }
+                return false;
             }
-        } catch (e) {
-            log.innerText = '❌ Ошибка сети/CORS: ' + e.message;
-            console.error(e);
+            
+        } catch (error) {
+            console.error('Request failed:', error);
+            statusBar.innerHTML = `<span class="error">❌ Сетевая ошибка</span>`;
+            contentArea.innerHTML = `<p style="color:#ef4444">Не удалось соединиться с сервером.<br><small>Проверьте интернет или URL шлюза.</small></p>`;
+            return false;
         }
     }
 
-    function resetSession() {
-        localStorage.removeItem(SESSION_KEY);
-        document.getElementById('content').innerHTML = '';
-        document.getElementById('log').innerText = '🗑 Сессия удалена.';
+    /**
+     * Навигация между шаблонами
+     */
+    function navigate(templateName) {
+        // Обновляем активную кнопку в меню
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.textContent.toLowerCase().includes(templateName));
+        if (activeBtn) activeBtn.classList.add('active');
+        
+        // Загружаем шаблон
+        sendRequest(templateName);
+        
+        // Обновляем URL без перезагрузки страницы (для красоты)
+        const newUrl = `${window.location.pathname}?view=${templateName}`;
+        window.history.replaceState({}, '', newUrl);
     }
+
+    /**
+     * Выход из системы (сброс сессии)
+     */
+    function logout() {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        updateSessionBadge(null, false);
+        document.getElementById('statusBar').innerHTML = '<span class="success">👋 Вы вышли из системы</span>';
+        document.getElementById('contentArea').innerHTML = `
+            <div style="text-align:center;padding:40px;">
+                <h2 style="border:none;">Вы успешно вышли</h2>
+                <p>Нажмите "Главная", чтобы начать новую сессию.</p>
+                <br>
+                <button onclick="navigate('home')" style="background:#22c55e;">🏠 На главную</button>
+            </div>
+        `;
+    }
+
+    /**
+     * Обновление бейджа сессии в шапке
+     */
+    function updateSessionBadge(sessionId, isNew) {
+        const badge = document.getElementById('sessionBadge');
+        if (sessionId) {
+            const shortId = sessionId.substring(0, 8) + '...';
+            const status = isNew ? '✨ новая' : '● активна';
+            badge.textContent = `ID: ${shortId} (${status})`;
+        } else {
+            badge.textContent = 'Сессия: —';
+        }
+    }
+
+    /**
+     * Инициализация кнопок внутри динамически загруженного контента
+     * (чтобы onclick="sendRequest(...)" работал)
+     */
+    function initContentButtons() {
+        // Все кнопки с атрибутом data-action будут обрабатываться здесь
+        document.querySelectorAll('[data-action]').forEach(btn => {
+            btn.onclick = function(e) {
+                e.preventDefault();
+                const action = this.dataset.action;
+                const template = this.dataset.template || action;
+                const params = this.dataset.params ? JSON.parse(this.dataset.params) : {};
+                sendRequest(template, params);
+            };
+        });
+    }
+
+    // ========================================================================
+    // 🚀 ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
+    // ========================================================================
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Показываем текущую сессию
+        const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
+        updateSessionBadge(savedSession, false);
+        
+        // 2. Читаем параметр ?view=... из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialView = urlParams.get('view') || 'home';
+        
+        // 3. Загружаем первый шаблон
+        // Небольшая задержка, чтобы интерфейс успел отрисоваться
+        setTimeout(() => {
+            navigate(initialView);
+        }, 100);
+    });
+
+    // ========================================================================
+    // 🛠️ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ВАШИХ ШАБЛОНОВ
+    // ========================================================================
+    
+    // Эти функции будут доступны внутри ваших PHP-шаблонов
+    // Пример использования в PHP: <button onclick="appNavigate('profile')">
+    
+    window.appNavigate = navigate;
+    window.appLogout = logout;
+    window.appSendRequest = sendRequest;
+    
+    // Быстрая отправка действия с параметрами
+    window.appAction = function(template, params = {}) {
+        sendRequest(template, params);
+    };
 </script>
+
 </body>
 </html>
