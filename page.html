@@ -14,7 +14,7 @@
 </head>
 <body>
 <div class="container">
-    <h1>🔒 Клиент с Сессией</h1>
+    <h1>🔒 Клиент с Сессией (CORS Fix)</h1>
     <p>Нажмите кнопку. Сессия будет сохранена в браузере.</p>
     
     <button onclick="sendRequest()">Отправить запрос</button>
@@ -25,7 +25,7 @@
 </div>
 
 <script>
-    // Вставьте сюда URL вашего Web App из GAS
+    // ⚠️ ВСТАВЬТЕ СЮДА ВАШ НОВЫЙ URL ПОСЛЕ ДЕПЛОЯ
     const GAS_GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyKJCKwghqQad9lWxJSr6lHoyYN_8uqg0fDy5wI3qiaywFm2948hxTXCZhLwCfZRRzY/exec';
     const SESSION_KEY = 'my_secure_session_id';
 
@@ -33,45 +33,46 @@
         const log = document.getElementById('log');
         const content = document.getElementById('content');
         
-        log.innerText = 'Статус: Загрузка...';
+        log.innerText = 'Статус: Отправка... (Обход CORS)';
         
-        // 1. Берем текущий session_id из LocalStorage (если есть)
         let currentSessionId = localStorage.getItem(SESSION_KEY);
         
         try {
             const payload = {
-                session_id: currentSessionId, // Отправляем ID (или null, если первый раз)
+                session_id: currentSessionId,
                 action: 'check_status'
             };
 
+            // 🔑 FIX CORS: Мы НЕ указываем headers: { 'Content-Type': ... }
+            // Это заставляет браузер использовать "Simple Request" без preflight OPTIONS.
+            // GAS отлично понимает JSON в теле, даже если заголовок текстовый.
             const response = await fetch(GAS_GATEWAY_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload)
+                // Никаких headers!
             });
 
             const result = await response.json();
 
             if (result.status === 'success') {
-                // 2. Сохраняем новый session_id от сервера
                 if (result.data.session_id) {
                     localStorage.setItem(SESSION_KEY, result.data.session_id);
                     log.innerText = '✅ Успех. Сессия: ' + (result.data.is_new_session ? 'Новая' : 'Продолжена');
                 }
-                
-                // 3. Отрисовываем HTML
                 content.innerHTML = result.data.html_page;
             } else {
-                log.innerText = '❌ Ошибка: ' + result.message;
+                log.innerText = '❌ Ошибка логики: ' + result.message;
             }
         } catch (e) {
-            log.innerText = '❌ Сеть: ' + e.message;
+            log.innerText = '❌ Ошибка сети/CORS: ' + e.message;
+            console.error(e);
         }
     }
 
     function resetSession() {
         localStorage.removeItem(SESSION_KEY);
         document.getElementById('content').innerHTML = '';
-        document.getElementById('log').innerText = '🗑 Сессия удалена. Следующий запрос создаст новую.';
+        document.getElementById('log').innerText = '🗑 Сессия удалена.';
     }
 </script>
 </body>
