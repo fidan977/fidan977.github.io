@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Dynamic App</title>
+    <title>Secure App</title>
     <style>
         :root { --primary: #667eea; --primary-hover: #556cd6; --bg: #f0f2f5; --card-bg: #fff; --text: #333; --danger: #ef4444; --success: #22c55e; --border: #e2e8f0; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,7 +13,7 @@
         .app-header h1 { font-size: 1.5rem; font-weight: 700; }
         .badges { display: flex; gap: 10px; flex-wrap: wrap; }
         .badge { font-size: 0.75rem; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-family: monospace; }
-        .nav-bar { display: flex; gap: 8px; padding: 15px 25px; background: #f8fafc; border-bottom: 1px solid var(--border); overflow-x: auto; flex-wrap: wrap; align-items: center; }
+        .nav-bar { display: flex; gap: 8px; padding: 15px 25px; background: #f8fafc; border-bottom: 1px solid var(--border); overflow-x: auto; flex-wrap: wrap; align-items: center; min-height: 50px; }
         .nav-btn { background: #fff; border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; white-space: nowrap; color: var(--text); font-weight: 500; }
         .nav-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
         .nav-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
@@ -42,256 +42,233 @@
         <h1>🔐 Secure App</h1>
         <div class="badges">
             <span class="badge" id="sessionBadge">Сессия: —</span>
-            <span class="badge" id="endpointBadge">Endpoint: —</span>
+            <span class="badge" id="endpointBadge">Страница: —</span>
         </div>
     </header>
+    
+    <!-- Сюда будем вставлять готовые кнопки из get_templates -->
     <nav class="nav-bar" id="navBar">
         <div class="spinner"></div> Загрузка меню...
     </nav>
+    
+    <!-- Сюда будем вставлять контент страницы -->
     <main class="content-area" id="contentArea">
         <div class="text-center" style="color:#666;padding:40px;">
             <div class="spinner" style="width:40px;height:40px;border-width:4px;"></div>
-            <p class="mt-4">Инициализация...</p>
+            <p class="mt-4">Загрузка контента...</p>
         </div>
     </main>
+    
     <div class="status-bar">
-        <span id="statusText" class="status-text">Готов к работе</span>
+        <span id="statusText" class="status-text">Инициализация...</span>
         <span id="timestamp" style="font-size:0.8rem;color:#94a3b8;"></span>
     </div>
 </div>
 
 <script>
     // ========================================================================
-    // ⚙️ НАСТРОЙКИ (ОБЯЗАТЕЛЬНО ЗАПОЛНИТЕ!)
+    // ⚙️ НАСТРОЙКИ
     // ========================================================================
     const GAS_GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyKJCKwghqQad9lWxJSr6lHoyYN_8uqg0fDy5wI3qiaywFm2948hxTXCZhLwCfZRRzY/exec';
     const SESSION_STORAGE_KEY = 'secure_session_token_v1';
-    const FILE_ICONS = { home: '🏠', profile: '👤', settings: '⚙️', list: '📋', stats: '📊', auth: '🔑', main: '🌐', dashboard: '📈' };
 
     // ========================================================================
-    // 🧠 ЯДРО ПРИЛОЖЕНИЯ
+    // 🧠 ЯДРО: ЗАПРОСЫ ЧЕРЕЗ GAS
     // ========================================================================
 
-    // 1. Универсальный запрос к GAS (все запросы через эту функцию)
+    // Универсальный POST-запрос к GAS
     async function sendGatewayRequest(payload) {
         try {
             const response = await fetch(GAS_GATEWAY_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload)
-                // Не указываем Content-Type header, чтобы избежать CORS preflight
             });
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return await response.json();
         } catch (e) {
-            console.error('Gateway request failed:', e);
+            console.error('Gateway error:', e);
             throw e;
         }
     }
 
-    // 2. Получение списка шаблонов (через GAS)
-    async function fetchTemplatesList() {
-        const result = await sendGatewayRequest({ action: 'get_templates_list' });
-        if (result.status === 'success' && Array.isArray(result.templates)) {
-            return result.templates;
+    // 1. Загрузка МЕНЮ (получаем готовые HTML-кнопки)
+    async function fetchMenuHtml(activePage = 'home') {
+        const result = await sendGatewayRequest({
+            action: 'get_menu_html',
+            active: activePage
+        });
+        
+        if (result.status === 'success' && result.html_menu) {
+            return result.html_menu;
         }
-        throw new Error(result.message || 'Не удалось загрузить список страниц');
+        throw new Error(result.message || 'Не удалось загрузить меню');
     }
 
-    // 3. Загрузка контента страницы (через GAS)
-    async function loadTemplate(endpointName, extraParams = {}) {
+    // 2. Загрузка КОНТЕНТА страницы (получаем подписанный HTML)
+    async function fetchPageHtml(endpointName) {
+        const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
+        
+        const result = await sendGatewayRequest({
+            action: 'load_page',
+            endpoint: endpointName,
+            session_id: sessionId
+        });
+        
+        if (result.status === 'success' && result.data?.html_page) {
+            // Если сервер прислал новый session_id — сохраняем
+            if (result.data.session_id) {
+                localStorage.setItem(SESSION_STORAGE_KEY, result.data.session_id);
+            }
+            return result.data.html_page;
+        }
+        throw new Error(result.message || 'Не удалось загрузить страницу');
+    }
+
+    // ========================================================================
+    // 🎨 ОТРИСОВКА ИНТЕРФЕЙСА
+    // ========================================================================
+
+    // Отрисовка меню (вставляем готовый HTML)
+    async function renderMenu(activePage = 'home') {
+        const navBar = document.getElementById('navBar');
+        try {
+            const htmlButtons = await fetchMenuHtml(activePage);
+            navBar.innerHTML = htmlButtons;
+            return true;
+        } catch (error) {
+            console.error('Menu error:', error);
+            navBar.innerHTML = `<span style="color:#ef4444;padding:10px;">❌ Ошибка меню</span>`;
+            return false;
+        }
+    }
+
+    // Отрисовка контента страницы
+    async function renderPage(endpointName) {
         const statusText = document.getElementById('statusText');
         const timestampEl = document.getElementById('timestamp');
         const contentArea = document.getElementById('contentArea');
         const endpointBadge = document.getElementById('endpointBadge');
         
-        // Обновляем UI
         statusText.className = 'status-text loading';
         statusText.innerHTML = '<span class="spinner"></span> Загрузка...';
         timestampEl.textContent = new Date().toLocaleTimeString();
-        endpointBadge.textContent = `Endpoint: ${endpointName}`;
+        endpointBadge.textContent = `Страница: ${endpointName}`;
         
-        // Подсветка активной кнопки
+        // Подсветка активной кнопки в меню
         document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.endpoint === endpointName);
+            btn.classList.toggle('active', btn.textContent.trim().toLowerCase() === endpointName);
         });
 
-        const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
-        
-        const payload = {
-            session_id: sessionId,
-            endpoint: endpointName,
-            template: endpointName,
-            timestamp: Date.now(),
-            ...extraParams
-        };
-
         try {
-            const result = await sendGatewayRequest(payload);
+            const htmlContent = await fetchPageHtml(endpointName);
             
-            if (result.status === 'success') {
-                // Обновляем сессию
-                if (result.data?.session_id) {
-                    localStorage.setItem(SESSION_STORAGE_KEY, result.data.session_id);
-                    updateSessionBadge(result.data.session_id, result.data.is_new_session);
-                }
-                
-                statusText.className = 'status-text success';
-                statusText.textContent = `✅ "${endpointName}" загружен`;
-                
-                // Вставляем полученный HTML
-                if (result.data?.html_page) {
-                    contentArea.innerHTML = result.data.html_page;
-                    initContentButtons();
-                }
-                
-            } else {
-                throw new Error(result.message || 'Ошибка сервера');
-            }
+            statusText.className = 'status-text success';
+            statusText.textContent = `✅ "${endpointName}" загружен`;
+            contentArea.innerHTML = htmlContent;
+            
+            // Инициализация кнопок внутри контента (если есть)
+            initContentButtons();
+            return true;
             
         } catch (error) {
-            console.error('Template load failed:', error);
             statusText.className = 'status-text error';
             statusText.textContent = `❌ ${error.message}`;
             contentArea.innerHTML = `
                 <div class="text-center" style="padding:40px;color:#ef4444;">
-                    <h3>⚠️ Не удалось загрузить</h3>
+                    <h3>⚠️ Ошибка загрузки</h3>
                     <p><small>${error.message}</small></p>
-                    <button onclick="loadTemplate('${endpointName}')" style="margin-top:15px;background:#ef4444;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;">🔄 Повторить</button>
+                    <button onclick="loadPage('${endpointName}')" style="margin-top:15px;background:#ef4444;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;">🔄 Повторить</button>
                 </div>
             `;
+            return false;
         }
     }
 
-    // 4. Генерация динамического меню
-    async function renderDynamicMenu() {
-        const navBar = document.getElementById('navBar');
-        try {
-            const templates = await fetchTemplatesList();
-            navBar.innerHTML = '';
-            
-            if (!templates || templates.length === 0) {
-                navBar.innerHTML = '<span style="color:#ef4444;padding:10px;">⚠️ Нет доступных страниц</span>';
-                return;
-            }
-
-            templates.forEach(name => {
-                // Пропускаем служебные файлы
-                if (['index', 'config', 'func', 'get_templates', 'test'].includes(name)) return;
-                
-                const icon = FILE_ICONS[name] || '📄';
-                const label = `${icon} ${name.charAt(0).toUpperCase() + name.slice(1)}`;
-                
-                const btn = document.createElement('button');
-                btn.className = 'nav-btn';
-                btn.dataset.endpoint = name;
-                btn.textContent = label;
-                btn.onclick = () => navigate(name);
-                navBar.appendChild(btn);
-            });
-            
-            // Кнопка выхода
-            const logoutBtn = document.createElement('button');
-            logoutBtn.className = 'nav-btn danger';
-            logoutBtn.textContent = '🚪 Выйти';
-            logoutBtn.onclick = logout;
-            navBar.appendChild(logoutBtn);
-            
-        } catch (error) {
-            console.error('Menu render failed:', error);
-            navBar.innerHTML = `<span style="color:#ef4444;padding:10px;">❌ Ошибка загрузки меню</span>`;
-        }
-    }
-
-    // 5. Навигация
-    function navigate(endpointName) {
-        loadTemplate(endpointName);
-        // Обновляем URL для истории браузера
-        const newUrl = `${window.location.pathname}?view=${endpointName}`;
-        window.history.replaceState({endpoint: endpointName}, '', newUrl);
-    }
-
-    // 6. Выход из системы
-    function logout() {
-        localStorage.removeItem(SESSION_STORAGE_KEY);
-        updateSessionBadge(null, false);
-        document.getElementById('endpointBadge').textContent = 'Endpoint: —';
-        document.getElementById('statusText').className = 'status-text success';
-        document.getElementById('statusText').textContent = '👋 Вы вышли из системы';
-        
-        document.getElementById('contentArea').innerHTML = `
-            <div class="text-center" style="padding:40px;">
-                <h2 style="border:none;color:#1e293b;">Сеанс завершён</h2>
-                <p class="mt-4">Нажмите любую кнопку в меню, чтобы начать новую сессию.</p>
-            </div>
-        `;
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    }
-
-    // 7. Обновление бейджа сессии
-    function updateSessionBadge(sessionId, isNew) {
-        const badge = document.getElementById('sessionBadge');
-        if (sessionId) {
-            const shortId = sessionId.substring(0, 8) + '...';
-            const status = isNew ? '✨ новая' : '● активна';
-            badge.textContent = `ID: ${shortId} (${status})`;
-        } else {
-            badge.textContent = 'Сессия: —';
-        }
-    }
-
-    // 8. Инициализация кнопок внутри загруженного контента
+    // Инициализация кнопок внутри загруженного контента
     function initContentButtons() {
         document.querySelectorAll('[data-action]').forEach(btn => {
             btn.onclick = function(e) {
                 e.preventDefault();
-                const action = this.dataset.action;
-                const target = this.dataset.template || this.dataset.endpoint || action;
-                const params = this.dataset.params ? JSON.parse(this.dataset.params) : {};
-                loadTemplate(target, params);
+                const target = this.dataset.template || this.dataset.endpoint || this.dataset.action;
+                loadPage(target, this.dataset.params ? JSON.parse(this.dataset.params) : {});
             };
         });
     }
 
     // ========================================================================
-    // 🌐 ГЛОБАЛЬНЫЕ ФУНКЦИИ (доступны в загружаемых шаблонах)
+    // 🧭 НАВИГАЦИЯ
     // ========================================================================
-    window.appNavigate = navigate;
-    window.appAction = loadTemplate;
-    window.appLogout = logout;
-    window.appGetSessionId = () => localStorage.getItem(SESSION_STORAGE_KEY);
+
+    // Главная функция: загружает меню + страницу
+    async function loadPage(endpointName, extraParams = {}) {
+        // 1. Сначала обновляем меню (чтобы подсветить активную кнопку)
+        await renderMenu(endpointName);
+        
+        // 2. Затем загружаем контент
+        await renderPage(endpointName);
+        
+        // 3. Обновляем URL для истории браузера
+        const newUrl = `${window.location.pathname}?view=${endpointName}`;
+        window.history.replaceState({page: endpointName}, '', newUrl);
+    }
+
+    // Выход из системы
+    function logout() {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        document.getElementById('sessionBadge').textContent = 'Сессия: —';
+        document.getElementById('statusText').className = 'status-text success';
+        document.getElementById('statusText').textContent = '👋 Вы вышли';
+        document.getElementById('contentArea').innerHTML = `
+            <div class="text-center" style="padding:40px;">
+                <h2 style="border:none;">Сеанс завершён</h2>
+                <p class="mt-4">Нажмите любую кнопку в меню для входа.</p>
+            </div>
+        `;
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    // Обновление бейджа сессии
+    function updateSessionBadge() {
+        const badge = document.getElementById('sessionBadge');
+        const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (sessionId) {
+            const shortId = sessionId.substring(0, 8) + '...';
+            badge.textContent = `ID: ${shortId}`;
+        } else {
+            badge.textContent = 'Сессия: —';
+        }
+    }
 
     // ========================================================================
-    // 🚀 ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ
+    // 🚀 ИНИЦИАЛИЗАЦИЯ
     // ========================================================================
     document.addEventListener('DOMContentLoaded', async () => {
-        // 1. Проверяем сохранённую сессию
-        const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
-        updateSessionBadge(savedSession, false);
+        // 1. Проверяем сессию
+        updateSessionBadge();
         
-        // 2. Строим динамическое меню (запрашиваем список через GAS)
-        await renderDynamicMenu();
-        
-        // 3. Определяем стартовую страницу из URL
+        // 2. Читаем ?view=... из URL
         const urlParams = new URLSearchParams(window.location.search);
-        const initialView = urlParams.get('view') || 'home';
+        const initialPage = urlParams.get('view') || 'home';
         
-        // 4. Подсвечиваем активную кнопку в меню
-        const activeBtn = document.querySelector(`.nav-btn[data-endpoint="${initialView}"]`);
-        if (activeBtn) {
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            activeBtn.classList.add('active');
-        }
-        
-        // 5. Загружаем стартовую страницу
-        setTimeout(() => navigate(initialView), 100);
+        // 3. Загружаем меню и страницу
+        await loadPage(initialPage);
         
         // Обработка кнопки "Назад" в браузере
         window.onpopstate = function(event) {
-            if (event.state?.endpoint) {
-                navigate(event.state.endpoint);
+            if (event.state?.page) {
+                loadPage(event.state.page);
             }
         };
     });
+
+    // ========================================================================
+    // 🌐 ГЛОБАЛЬНЫЕ ФУНКЦИИ (для использования в шаблонах)
+    // ========================================================================
+    window.loadPage = loadPage;
+    window.logout = logout;
+    window.appAction = function(template, params = {}) {
+        loadPage(template, params);
+    };
 </script>
 </body>
 </html>
