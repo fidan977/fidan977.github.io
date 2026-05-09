@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure HTML Renderer</title>
+    <title>Secure HTML Channel</title>
     <style>
         * { box-sizing: border-box; }
         body { 
@@ -12,6 +12,7 @@
             color: #00ff00; 
             padding: 20px; 
             margin: 0;
+            line-height: 1.5;
         }
         .container { max-width: 900px; margin: 0 auto; }
         .header {
@@ -22,10 +23,11 @@
         }
         .route {
             background: #222;
-            padding: 10px;
+            padding: 10px 15px;
             border-left: 3px solid #00ff00;
-            font-size: 14px;
+            font-size: 13px;
             margin-bottom: 20px;
+            border-radius: 4px;
         }
         button { 
             background: #00ff00; 
@@ -37,6 +39,7 @@
             font-weight: bold; 
             width: 100%; 
             border-radius: 4px;
+            transition: background 0.2s;
         }
         button:hover:not(:disabled) { background: #00cc00; }
         button:disabled { background: #555; color: #888; cursor: not-allowed; }
@@ -45,10 +48,11 @@
             border: 1px solid #333; 
             padding: 15px; 
             margin: 20px 0; 
-            min-height: 100px; 
+            min-height: 120px; 
             white-space: pre-wrap; 
             font-size: 13px; 
             color: #888;
+            border-radius: 4px;
         }
         #render-area {
             background: #fff;
@@ -60,28 +64,63 @@
             min-height: 200px;
             display: none;
         }
+        #render-area * { margin: 0; padding: 0; }
+        #render-area h2 { margin-bottom: 15px; color: #222; }
+        #render-area p { margin: 8px 0; }
+        #render-area button { 
+            background: #4285f4; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer;
+            margin-top: 10px;
+        }
         .success { color: #00ff00; font-weight: bold; }
         .error { color: #ff5555; font-weight: bold; }
         .info { color: #55ccff; }
+        .meta { 
+            font-size: 11px; 
+            color: #666; 
+            margin-top: 25px; 
+            border-top: 1px solid #333; 
+            padding-top: 15px;
+        }
+        .meta code { 
+            background: #222; 
+            padding: 2px 6px; 
+            border-radius: 3px;
+            color: #00ccff;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1> Secure HTML Channel</h1>
-        <p>Загрузка HTML через защищенный туннель</p>
+        <h1>🔒 Secure HTML Channel</h1>
+        <p>Загрузка HTML через защищённый туннель: GitHub → GAS → Beget</p>
     </div>
+    
     <div class="route">
-        <strong>Маршрут:</strong><br>
-        GitHub (HTTPS) ➔ GAS (HTTPS) ➔ Beget (HTTP+HMAC) ➔ GAS ➔ GitHub
+        <strong>Маршрут запроса:</strong><br>
+        🌐 GitHub Pages (HTTPS) → 🔄 Google Apps Script (HTTPS) → 🖥️ Beget (HTTP + HMAC) → GAS → GitHub
     </div>
-    <button id="btn" onclick="loadSecureHTML()">▶ ЗАГРУЗИТЬ HTML</button>
-    <div id="log">Ожидание...</div>
+    
+    <button id="btn" onclick="loadSecureHTML()">▶ ЗАГРУЗИТЬ ЗАЩИЩЁННЫЙ HTML</button>
+    
+    <div id="log">Ожидание команды...</div>
+    
     <div id="render-area"></div>
+    
+    <div class="meta">
+        <p>🔑 Тестовый ключ: <code>TEST_SECRET_KEY_2026_...</code> <span class="error">(замените перед продакшеном!)</span></p>
+        <p>🌐 PHP Endpoint: <code>http://c93253ng.beget.tech/gate/base/test</code></p>
+        <p class="info">💡 Откройте консоль браузера (F12) → вкладка Network для отладки.</p>
+    </div>
 </div>
 
 <script>
-    // ✅ ВСТАВЬТЕ СЮДА ВАШ АКТУАЛЬНЫЙ URL GAS
+    // ✅ ВСТАВЬТЕ СЮДА ВАШ АКТУАЛЬНЫЙ URL GOOGLE APPS SCRIPT
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbyKJCKwghqQad9lWxJSr6lHoyYN_8uqg0fDy5wI3qiaywFm2948hxTXCZhLwCfZRRzY/exec';
 
     async function loadSecureHTML() {
@@ -93,38 +132,60 @@
         btn.innerText = '⏳ Загрузка...';
         renderArea.style.display = 'none';
         renderArea.innerHTML = '';
-        log.innerHTML = '<span class="info">[1/3] Отправка запроса...</span>\n';
+        log.innerHTML = '<span class="info">[1/3] Отправка запроса в GAS...</span>\n';
 
         try {
+            // Формируем полезную нагрузку
             const payload = {
                 request_type: 'get_html_page',
                 user: 'admin',
                 timestamp: Date.now()
             };
 
-            // 🔑 ВАЖНО: Не указываем Content-Type в заголовках, чтобы избежать CORS preflight
+            // 🔑 ВАЖНО: Не указываем заголовок Content-Type, чтобы избежать CORS preflight (OPTIONS)
+            // GAS не поддерживает OPTIONS, поэтому отправляем как "простой" POST-запрос
             const response = await fetch(GAS_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload)
+                // Никаких headers: { 'Content-Type': ... } — это вызывает preflight!
             });
 
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const result = await response.json();
-            log.innerHTML += '<span class="info">[2/3] Ответ получен...</span>\n';
+            log.innerHTML += '<span class="info">[2/3] Ответ получен. Проверка...</span>\n';
 
+            // Обработка результата
             if (result.status === 'success' && result.data && result.data.html_page) {
-                log.innerHTML += '<span class="success">[3/3] ✅ HTML получен и проверен!</span>\n';
+                log.innerHTML += '<span class="success">[3/3] ✅ HTML успешно получен и проверен!</span>\n';
+                
+                // Отрисовка полученного HTML
                 renderArea.style.display = 'block';
+                // ⚠️ innerHTML выполняет скрипты внутри полученного HTML.
+                // Так как канал защищён подписью, мы доверяем источнику (нашему серверу).
                 renderArea.innerHTML = result.data.html_page;
+                
+            } else if (result.status === 'error') {
+                log.innerHTML += `<span class="error">[3/3] ❌ ОШИБКА: ${result.message}</span>\n`;
+                if (result.message.includes('signature')) {
+                    log.innerHTML += `<span class="info">💡 Проверьте: одинаков ли SHARED_SECRET в PHP и GAS?</span>`;
+                }
             } else {
-                log.innerHTML += `<span class="error">❌ Ошибка: ${result.message || 'Неверный формат'}</span>`;
+                log.innerHTML += `<span class="error">[3/3] ❌ НЕИЗВЕСТНЫЙ ФОРМАТ ОТВЕТА</span>\n`;
+                log.innerHTML += `\nRaw response:\n` + JSON.stringify(result, null, 2);
             }
+
         } catch (e) {
-            log.innerHTML += `<span class="error">❌ Ошибка: ${e.message}</span>`;
+            log.innerHTML += `<span class="error">❌ СЕТЕВАЯ ОШИБКА: ${e.message}</span>\n`;
+            log.innerHTML += `<span class="info">💡 Возможные причины:
+• GAS не развернут с доступом "Все (Anyone)"
+• Неверный URL в переменной GAS_URL
+• Блокировка фаерволом/антивирусом</span>`;
         } finally {
             btn.disabled = false;
-            btn.innerText = '▶ ЗАГРУЗИТЬ HTML';
+            btn.innerText = '▶ ЗАГРУЗИТЬ ЗАЩИЩЁННЫЙ HTML';
         }
     }
 </script>
