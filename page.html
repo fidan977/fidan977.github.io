@@ -3,24 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure App</title>
+    <title>Secure Dynamic App</title>
     <style>
         /* === БАЗОВЫЕ СТИЛИ === */
+        :root {
+            --primary: #667eea;
+            --primary-hover: #556cd6;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #333;
+            --text-muted: #666;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+        
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f0f2f5;
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             line-height: 1.6;
             padding: 20px;
+            min-height: 100vh;
         }
+
         .app-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
-            background: #fff;
+            background: var(--card-bg);
             border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 40px);
         }
 
         /* === ШАПКА === */
@@ -32,111 +50,135 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
         }
-        .app-header h1 { font-size: 1.4rem; font-weight: 600; }
-        .session-badge {
+        
+        .app-header h1 { 
+            font-size: 1.5rem; 
+            font-weight: 700; 
+            letter-spacing: -0.5px;
+        }
+        
+        .badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
             font-size: 0.75rem;
             background: rgba(255,255,255,0.2);
             padding: 4px 12px;
             border-radius: 20px;
             font-family: monospace;
-        }
-        .endpoint-badge {
-            font-size: 0.75rem;
-            background: rgba(255,255,255,0.3);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-family: monospace;
+            backdrop-filter: blur(5px);
         }
 
-        /* === НАВИГАЦИЯ === */
+        /* === НАВИГАЦИЯ (ДИНАМИЧЕСКАЯ) === */
         .nav-bar {
             display: flex;
             gap: 8px;
             padding: 15px 25px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #eee;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
             overflow-x: auto;
             flex-wrap: wrap;
+            align-items: center;
         }
+        
         .nav-btn {
             background: #fff;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border);
             padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             white-space: nowrap;
+            color: var(--text);
+            font-weight: 500;
         }
-        .nav-btn:hover, .nav-btn.active {
-            background: #667eea;
+        
+        .nav-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-1px);
+        }
+        
+        .nav-btn.active {
+            background: var(--primary);
             color: white;
-            border-color: #667eea;
+            border-color: var(--primary);
+            box-shadow: 0 2px 5px rgba(102, 126, 234, 0.3);
         }
+        
         .nav-btn.danger {
-            border-color: #dc3545;
-            color: #dc3545;
+            border-color: #fecaca;
+            color: var(--danger);
+            margin-left: auto; /* Сдвигает кнопку выхода вправо */
         }
+        
         .nav-btn.danger:hover {
-            background: #dc3545;
+            background: var(--danger);
             color: white;
+            border-color: var(--danger);
         }
 
         /* === КОНТЕНТ === */
         .content-area {
-            padding: 25px;
-            min-height: 400px;
+            padding: 30px;
+            flex-grow: 1;
+            background: #fff;
         }
+        
         .content-area h2 {
-            margin-bottom: 15px;
-            color: #2d3748;
-            border-bottom: 2px solid #667eea;
+            margin-bottom: 20px;
+            color: #1e293b;
+            font-size: 1.8rem;
+            border-bottom: 2px solid var(--primary);
             padding-bottom: 10px;
             display: inline-block;
         }
-        .content-area p { margin: 10px 0; }
+        
+        .content-area p { margin-bottom: 15px; }
         .content-area code {
             background: #f1f5f9;
             padding: 2px 6px;
             border-radius: 4px;
-            font-family: monospace;
+            font-family: 'Consolas', monospace;
             font-size: 0.9em;
-            color: #c72e53;
+            color: #d946ef;
         }
         .content-area pre {
             background: #1e293b;
             color: #e2e8f0;
-            padding: 12px;
-            border-radius: 6px;
+            padding: 15px;
+            border-radius: 8px;
             overflow-x: auto;
             font-size: 0.85rem;
-            margin: 10px 0;
+            margin: 15px 0;
+            border: 1px solid #334155;
         }
 
-        /* === СТАТУС И УВЕДОМЛЕНИЯ === */
+        /* === СТАТУС БАР === */
         .status-bar {
             padding: 12px 25px;
-            background: #f8f9fa;
-            border-top: 1px solid #eee;
+            background: #f8fafc;
+            border-top: 1px solid var(--border);
             font-size: 0.9rem;
-            color: #666;
-            min-height: 45px;
+            color: var(--text-muted);
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
+            align-items: center;
         }
-        .status-bar .success { color: #22c55e; font-weight: 500; }
-        .status-bar .error { color: #ef4444; font-weight: 500; }
-        .status-bar .loading { color: #667eea; }
-        .status-bar .info { color: #3b82f6; }
+        
+        .status-text.success { color: var(--success); font-weight: 600; }
+        .status-text.error { color: var(--danger); font-weight: 600; }
+        .status-text.loading { color: var(--primary); font-weight: 600; }
 
         /* === КНОПКИ ВНУТРИ КОНТЕНТА === */
         .content-area button {
-            background: #667eea;
+            background: var(--primary);
             color: white;
             border: none;
             padding: 10px 20px;
@@ -146,53 +188,37 @@
             font-size: 0.95rem;
             transition: background 0.2s;
         }
-        .content-area button:hover { background: #556cd6; }
-        .content-area button.secondary {
-            background: #64748b;
-        }
-        .content-area button.secondary:hover {
-            background: #475569;
-        }
-        .content-area button.outline {
-            background: transparent;
-            border: 1px solid #667eea;
-            color: #667eea;
-        }
-        .content-area button.outline:hover {
-            background: #667eea;
-            color: white;
-        }
+        .content-area button:hover { background: var(--primary-hover); }
+        .content-area button.secondary { background: #64748b; }
+        .content-area button.secondary:hover { background: #475569; }
 
         /* === АДАПТИВНОСТЬ === */
         @media (max-width: 600px) {
-            .app-header { flex-direction: column; text-align: center; }
+            body { padding: 10px; }
+            .app-header { flex-direction: column; text-align: center; padding: 15px; }
             .nav-bar { padding: 10px 15px; }
             .nav-btn { padding: 6px 12px; font-size: 0.85rem; }
             .content-area { padding: 20px; }
-            .status-bar { flex-direction: column; align-items: flex-start; }
+            .nav-btn.danger { margin-left: 0; width: 100%; margin-top: 5px; }
         }
 
-        /* === СКРЫТЫЕ ЭЛЕМЕНТЫ === */
-        .hidden { display: none !important; }
+        /* === УТИЛИТЫ === */
         .spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e2e8f0;
-            border-top-color: #667eea;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-left-color: var(--primary);
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            animation: spin 1s linear infinite;
             margin-right: 8px;
             vertical-align: middle;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
         
-        /* === УТИЛИТЫ === */
+        .hidden { display: none !important; }
         .text-center { text-align: center; }
-        .mt-2 { margin-top: 1rem; }
-        .mb-2 { margin-bottom: 1rem; }
-        .flex { display: flex; gap: 10px; align-items: center; }
-        .flex-wrap { flex-wrap: wrap; }
+        .mt-4 { margin-top: 1.5rem; }
     </style>
 </head>
 <body>
@@ -201,34 +227,29 @@
     <!-- Шапка -->
     <header class="app-header">
         <h1>🔐 Secure App</h1>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <span class="session-badge" id="sessionBadge">Сессия: —</span>
-            <span class="endpoint-badge" id="endpointBadge">Endpoint: —</span>
+        <div class="badges">
+            <span class="badge" id="sessionBadge">Сессия: —</span>
+            <span class="badge" id="endpointBadge">Endpoint: —</span>
         </div>
     </header>
 
-    <!-- Навигация -->
+    <!-- Динамическая навигация -->
     <nav class="nav-bar" id="navBar">
-        <button class="nav-btn active" data-endpoint="home" onclick="navigate('home')">🏠 Главная</button>
-        <button class="nav-btn" data-endpoint="profile" onclick="navigate('profile')">👤 Профиль</button>
-        <button class="nav-btn" data-endpoint="list" onclick="navigate('list')">📋 Список</button>
-        <button class="nav-btn" data-endpoint="stats" onclick="navigate('stats')">📊 Статистика</button>
-        <button class="nav-btn" data-endpoint="settings" onclick="navigate('settings')">⚙️ Настройки</button>
-        <button class="nav-btn danger" onclick="logout()">🚪 Выйти</button>
+        <div class="spinner"></div> Загрузка меню...
     </nav>
 
     <!-- Область контента -->
     <main class="content-area" id="contentArea">
         <div class="text-center" style="color:#666;padding:40px;">
-            <div class="spinner"></div>
-            <p class="mt-2">Загрузка...</p>
+            <div class="spinner" style="width:40px;height:40px;border-width:4px;"></div>
+            <p class="mt-4">Инициализация приложения...</p>
         </div>
     </main>
 
     <!-- Статус бар -->
-    <div class="status-bar" id="statusBar">
-        <span id="statusText">Готов к работе</span>
-        <span id="timestamp" style="font-size:0.8rem;color:#999;"></span>
+    <div class="status-bar">
+        <span id="statusText" class="status-text">Готов к работе</span>
+        <span id="timestamp" style="font-size:0.8rem;color:#94a3b8;"></span>
     </div>
 </div>
 
@@ -237,156 +258,185 @@
     // ⚙️ НАСТРОЙКИ (ОБЯЗАТЕЛЬНО ЗАПОЛНИТЕ!)
     // ========================================================================
     
-    // 🔗 ВСТАВЬТЕ СЮДА ВАШ АКТУАЛЬНЫЙ URL WEB APP ИЗ GOOGLE APPS SCRIPT
+    // 🔗 1. URL вашего Web App из Google Apps Script
     const GAS_GATEWAY_URL = 'https://script.google.com/macros/s/AKfycbyKJCKwghqQad9lWxJSr6lHoyYN_8uqg0fDy5wI3qiaywFm2948hxTXCZhLwCfZRRzY/exec';
     
-    // 🔗 БАЗОВЫЙ ПУТЬ К ВАШЕМУ РОУТЕРУ НА BEGET
-    // GAS будет подставлять endpoint в конец этого пути
-    const PHP_BASE_PATH = '/gate/base';
-    
+    // 🔗 2. Путь к скрипту получения списка файлов на вашем сервере
+    // Этот скрипт должен лежать в той же папке, что и шаблоны (например, /gate/base/)
+    const TEMPLATES_LIST_URL = 'http://c93253ng.beget.tech/gate/base/get_templates.php';
+
     // Ключ для localStorage
     const SESSION_STORAGE_KEY = 'secure_session_token_v1';
+
+    // Иконки для популярных названий файлов (опционально)
+    const FILE_ICONS = {
+        home: '🏠', profile: '👤', settings: '⚙️', list: '📋', 
+        stats: '📊', auth: '🔑', register: '📝', main: '🌐',
+        dashboard: '📈', admin: '🛡️'
+    };
 
     // ========================================================================
     // 🧠 ЯДРО ПРИЛОЖЕНИЯ
     // ========================================================================
 
     /**
-     * Основная функция отправки запроса на защищённый шлюз
-     * @param {string} templateName - Имя шаблона/эндпоинта (home, profile, list...)
-     * @param {object} extraParams - Дополнительные параметры для запроса
+     * 1. Загрузка и отрисовка динамического меню
      */
-    async function sendRequest(templateName, extraParams = {}) {
-        const statusBar = document.getElementById('statusBar');
+    async function renderDynamicMenu() {
+        const navBar = document.getElementById('navBar');
+        
+        try {
+            const response = await fetch(TEMPLATES_LIST_URL);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const templates = await response.json();
+            
+            navBar.innerHTML = ''; // Очистка "Загрузки..."
+            
+            if (!Array.isArray(templates) || templates.length === 0) {
+                navBar.innerHTML = '<span style="color:#ef4444;padding:10px;">⚠️ Нет доступных страниц</span>';
+                return;
+            }
+
+            // Генерация кнопок
+            templates.forEach(name => {
+                // Пропускаем служебные файлы, если они вдруг попали в список
+                if (['index', 'config', 'func'].includes(name)) return;
+
+                const icon = FILE_ICONS[name] || '📄';
+                // Делаем первую букву заглавной: home -> Home
+                const label = `${icon} ${name.charAt(0).toUpperCase() + name.slice(1)}`;
+                
+                const btn = document.createElement('button');
+                btn.className = 'nav-btn';
+                btn.dataset.endpoint = name;
+                btn.textContent = label;
+                btn.onclick = () => navigate(name);
+                
+                navBar.appendChild(btn);
+            });
+            
+            // Кнопка выхода
+            const logoutBtn = document.createElement('button');
+            logoutBtn.className = 'nav-btn danger';
+            logoutBtn.textContent = '🚪 Выйти';
+            logoutBtn.onclick = logout;
+            navBar.appendChild(logoutBtn);
+            
+        } catch (error) {
+            console.error('Ошибка загрузки меню:', error);
+            navBar.innerHTML = `<span style="color:#ef4444;padding:10px;">❌ Ошибка загрузки меню. Проверьте консоль.</span>`;
+        }
+    }
+
+    /**
+     * 2. Основная функция запроса данных
+     */
+    async function sendRequest(endpointName, extraParams = {}) {
         const statusText = document.getElementById('statusText');
         const timestampEl = document.getElementById('timestamp');
         const contentArea = document.getElementById('contentArea');
         const endpointBadge = document.getElementById('endpointBadge');
         
-        // Обновляем UI
-        statusText.innerHTML = '<span class="loading">⏳ Загрузка...</span>';
+        // UI обновления
+        statusText.className = 'status-text loading';
+        statusText.innerHTML = '<span class="spinner"></span> Загрузка...';
         timestampEl.textContent = new Date().toLocaleTimeString();
-        endpointBadge.textContent = `Endpoint: ${PHP_BASE_PATH}/${templateName}`;
+        endpointBadge.textContent = `Endpoint: ${endpointName}`;
         
-        // Получаем текущий session_id
+        // Подсветка активной кнопки
+        document.querySelectorAll('.nav-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.endpoint === endpointName);
+        });
+
         const sessionId = localStorage.getItem(SESSION_STORAGE_KEY);
         
-        // Формируем пакет данных
         const payload = {
             session_id: sessionId,
-            template: templateName,      // Для внутренней логики шаблона
-            endpoint: templateName,      // 🔑 Какой эндпоинт вызвать на сервере
+            template: endpointName,   // Для внутренней логики PHP
+            endpoint: endpointName,   // Для роутинга
             timestamp: Date.now(),
-            user_agent: navigator.userAgent.substring(0, 100),
             ...extraParams
         };
         
         try {
-            // 🔑 ОТПРАВКА ЗАПРОСА (без заголовков Content-Type для обхода CORS в GAS)
             const response = await fetch(GAS_GATEWAY_URL, {
                 method: 'POST',
                 body: JSON.stringify(payload)
-                // Важно: не указываем headers, чтобы браузер не слал OPTIONS preflight
             });
             
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
             const result = await response.json();
             
-            // Обработка ответа
             if (result.status === 'success') {
-                // Обновляем сессию, если сервер прислал новую
+                // Обновление сессии
                 if (result.data.session_id) {
                     localStorage.setItem(SESSION_STORAGE_KEY, result.data.session_id);
                     updateSessionBadge(result.data.session_id, result.data.is_new_session);
                 }
                 
-                statusText.innerHTML = `<span class="success">✅ "${result.data.template_loaded}" загружен</span>`;
+                statusText.className = 'status-text success';
+                statusText.textContent = `✅ "${endpointName}" загружен`;
                 
-                // Вставляем полученный HTML
+                // Рендер HTML
                 if (result.data.html_page) {
                     contentArea.innerHTML = result.data.html_page;
-                    
-                    // Инициализируем кнопки внутри загруженного контента
-                    initContentButtons();
+                    initContentButtons(); // Активация кнопок внутри контента
                 }
                 
-                // Если есть доп. данные — логируем в консоль
-                if (result.data.extra) {
-                    console.log('Extra data:', result.data.extra);
-                }
-                
-                return true;
             } else {
-                statusText.innerHTML = `<span class="error">❌ Ошибка: ${result.message}</span>`;
-                contentArea.innerHTML = `
-                    <div style="text-align:center;color:#ef4444;padding:20px;">
-                        <h3>⚠️ Не удалось загрузить контент</h3>
-                        <p><small>${result.message || 'Неизвестная ошибка'}</small></p>
-                        ${result.message?.toLowerCase().includes('session') || result.message?.toLowerCase().includes('expired') 
-                            ? '<button onclick="logout()" style="margin-top:10px;">🔄 Начать новую сессию</button>' 
-                            : ''}
-                    </div>
-                `;
-                return false;
+                throw new Error(result.message || 'Неизвестная ошибка сервера');
             }
             
         } catch (error) {
             console.error('Request failed:', error);
-            statusText.innerHTML = `<span class="error">❌ Сетевая ошибка</span>`;
+            statusText.className = 'status-text error';
+            statusText.textContent = `❌ Ошибка: ${error.message}`;
+            
             contentArea.innerHTML = `
-                <div style="text-align:center;color:#ef4444;padding:20px;">
-                    <h3>🌐 Ошибка соединения</h3>
-                    <p><small>Не удалось соединиться с сервером.<br>Проверьте интернет или URL шлюза.</small></p>
-                    <button onclick="sendRequest('${templateName}')" style="margin-top:10px;">🔄 Повторить</button>
+                <div class="text-center" style="padding:40px;color:#ef4444;">
+                    <h3>⚠️ Не удалось загрузить данные</h3>
+                    <p><small>${error.message}</small></p>
+                    <button onclick="sendRequest('${endpointName}')" class="mt-4">🔄 Повторить</button>
                 </div>
             `;
-            return false;
         }
     }
 
     /**
-     * Навигация между шаблонами/эндпоинтами
+     * 3. Навигация
      */
     function navigate(endpointName) {
-        // Обновляем активную кнопку в меню
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.endpoint === endpointName) {
-                btn.classList.add('active');
-            }
-        });
-        
-        // Загружаем шаблон
         sendRequest(endpointName);
-        
-        // Обновляем URL без перезагрузки страницы (для красоты и истории)
+        // Обновляем URL для истории браузера
         const newUrl = `${window.location.pathname}?view=${endpointName}`;
         window.history.replaceState({endpoint: endpointName}, '', newUrl);
     }
 
     /**
-     * Выход из системы (сброс сессии)
+     * 4. Выход
      */
     function logout() {
         localStorage.removeItem(SESSION_STORAGE_KEY);
         updateSessionBadge(null, false);
         document.getElementById('endpointBadge').textContent = 'Endpoint: —';
-        document.getElementById('statusText').innerHTML = '<span class="success">👋 Вы вышли из системы</span>';
+        document.getElementById('statusText').className = 'status-text success';
+        document.getElementById('statusText').textContent = '👋 Вы вышли из системы';
+        
         document.getElementById('contentArea').innerHTML = `
-            <div style="text-align:center;padding:40px;">
-                <h2 style="border:none;color:#2d3748;">Вы успешно вышли</h2>
-                <p class="mt-2">Нажмите "Главная", чтобы начать новую сессию.</p>
-                <br>
-                <button onclick="navigate('home')" style="background:#22c55e;">🏠 На главную</button>
+            <div class="text-center" style="padding:40px;">
+                <h2 style="border:none;">Сеанс завершён</h2>
+                <p class="mt-4">Нажмите любую кнопку в меню, чтобы начать новую сессию.</p>
             </div>
         `;
+        
+        // Сброс активной кнопки
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     }
 
     /**
-     * Обновление бейджа сессии в шапке
+     * 5. Вспомогательные функции
      */
     function updateSessionBadge(sessionId, isNew) {
         const badge = document.getElementById('sessionBadge');
@@ -399,100 +449,52 @@
         }
     }
 
-    /**
-     * Инициализация кнопок внутри динамически загруженного контента
-     * Поддерживает: <button data-action="load" data-template="profile">
-     */
+    // Активация кнопок внутри загруженного HTML контента
     function initContentButtons() {
-        // Кнопки с data-action
         document.querySelectorAll('[data-action]').forEach(btn => {
             btn.onclick = function(e) {
                 e.preventDefault();
                 const action = this.dataset.action;
-                const template = this.dataset.template || action;
-                const endpoint = this.dataset.endpoint || template;
+                const target = this.dataset.template || this.dataset.endpoint || action;
                 const params = this.dataset.params ? JSON.parse(this.dataset.params) : {};
-                sendRequest(endpoint, params);
+                sendRequest(target, params);
             };
-        });
-        
-        // Кнопки с onclick="appNavigate(...)"
-        document.querySelectorAll('[onclick*="appNavigate"]').forEach(btn => {
-            // Уже обработано через глобальную функцию
         });
     }
 
+    // Глобальные функции для использования внутри PHP-шаблонов
+    window.appNavigate = navigate;
+    window.appAction = sendRequest;
+    window.appLogout = logout;
+
     // ========================================================================
-    // 🚀 ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
+    // 🚀 ЗАПУСК
     // ========================================================================
-    
-    document.addEventListener('DOMContentLoaded', () => {
-        // 1. Показываем текущую сессию
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. Проверяем сохраненную сессию
         const savedSession = localStorage.getItem(SESSION_STORAGE_KEY);
         updateSessionBadge(savedSession, false);
         
-        // 2. Читаем параметр ?view=... из URL
+        // 2. Строим меню (запрашиваем список файлов с сервера)
+        await renderDynamicMenu();
+        
+        // 3. Определяем стартовую страницу
         const urlParams = new URLSearchParams(window.location.search);
         const initialView = urlParams.get('view') || 'home';
         
-        // 3. Обновляем активную кнопку в меню (если есть)
-        const navBtn = document.querySelector(`.nav-btn[data-endpoint="${initialView}"]`);
-        if (navBtn) {
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            navBtn.classList.add('active');
-        }
-        
-        // 4. Загружаем первый шаблон с небольшой задержкой
+        // 4. Загружаем стартовую страницу
+        // Небольшая задержка, чтобы UI успел отрисоваться
         setTimeout(() => {
             navigate(initialView);
         }, 100);
         
-        // 5. Обработка кнопки "Назад" в браузере
+        // Обработка кнопки "Назад" в браузере
         window.onpopstate = function(event) {
             if (event.state?.endpoint) {
                 navigate(event.state.endpoint);
             }
         };
     });
-
-    // ========================================================================
-    // 🛠️ ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ВАШИХ ШАБЛОНОВ (PHP)
-    // Доступны внутри включаемых файлов через window.имя_функции
-    // ========================================================================
-    
-    window.appNavigate = navigate;
-    window.appLogout = logout;
-    window.appSendRequest = sendRequest;
-    
-    /**
-     * Удобная обёртка для отправки действия с параметрами
-     * Пример использования в PHP:
-     * <button onclick="appAction('profile', {user_id: 123})">Профиль</button>
-     */
-    window.appAction = function(endpoint, params = {}) {
-        sendRequest(endpoint, params);
-    };
-    
-    /**
-     * Показать уведомление в статус-баре
-     */
-    window.appNotify = function(message, type = 'info') {
-        const statusText = document.getElementById('statusText');
-        const classes = {
-            'success': 'success',
-            'error': 'error', 
-            'info': 'info',
-            'loading': 'loading'
-        };
-        statusText.innerHTML = `<span class="${classes[type] || 'info'}">${message}</span>`;
-    };
-    
-    /**
-     * Получить текущий session_id
-     */
-    window.appGetSessionId = function() {
-        return localStorage.getItem(SESSION_STORAGE_KEY);
-    };
 </script>
 
 </body>
