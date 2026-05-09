@@ -3,27 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Test: GitHub -> GAS -> Beget</title>
+    <title>Secure Test: GitHub → GAS → Beget</title>
     <style>
-        body { font-family: 'Courier New', Courier, monospace; background: #1a1a1a; color: #00ff00; padding: 20px; line-height: 1.6; }
-        .container { max-width: 800px; margin: 0 auto; border: 1px solid #00ff00; padding: 20px; box-shadow: 0 0 10px rgba(0, 255, 0, 0.2); }
-        h1 { text-align: center; border-bottom: 1px dashed #00ff00; padding-bottom: 10px; }
-        button { background: #00ff00; color: #000; border: none; padding: 15px 30px; font-size: 16px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 20px; transition: background 0.2s; }
-        button:hover { background: #00cc00; }
-        button:disabled { background: #555; color: #888; cursor: not-allowed; }
-        #log { background: #000; border: 1px solid #333; padding: 15px; margin-top: 20px; min-height: 200px; white-space: pre-wrap; font-size: 13px; overflow-x: auto; border-radius: 4px; }
-        .success { color: #00ff00; }
-        .error { color: #ff5555; }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            background: #1a1a1a; 
+            color: #00ff00; 
+            padding: 20px; 
+            line-height: 1.6;
+            margin: 0;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            border: 1px solid #00ff00; 
+            padding: 25px; 
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.15);
+            border-radius: 8px;
+        }
+        h1 { 
+            text-align: center; 
+            border-bottom: 1px dashed #00ff00; 
+            padding-bottom: 15px; 
+            margin-top: 0;
+        }
+        .route { 
+            background: #222; 
+            padding: 10px 15px; 
+            border-left: 3px solid #00ff00;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        button { 
+            background: #00ff00; 
+            color: #000; 
+            border: none; 
+            padding: 15px 30px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            width: 100%; 
+            margin: 20px 0;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        button:hover:not(:disabled) { 
+            background: #00cc00; 
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 255, 0, 0.3);
+        }
+        button:disabled { 
+            background: #555; 
+            color: #888; 
+            cursor: not-allowed; 
+        }
+        #log { 
+            background: #000; 
+            border: 1px solid #333; 
+            padding: 15px; 
+            margin-top: 20px; 
+            min-height: 250px; 
+            white-space: pre-wrap; 
+            font-size: 13px; 
+            overflow-x: auto; 
+            border-radius: 4px;
+            line-height: 1.5;
+        }
+        .success { color: #00ff00; font-weight: bold; }
+        .error { color: #ff5555; font-weight: bold; }
         .info { color: #55ccff; }
         .warning { color: #ffaa00; }
-        .meta { font-size: 11px; color: #666; margin-top: 20px; border-top: 1px solid #333; padding-top: 10px; }
+        .meta { 
+            font-size: 11px; 
+            color: #666; 
+            margin-top: 25px; 
+            border-top: 1px solid #333; 
+            padding-top: 15px;
+        }
+        .meta code { 
+            background: #222; 
+            padding: 2px 6px; 
+            border-radius: 3px;
+            color: #00ccff;
+        }
+        .step { margin: 8px 0; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔒 SECURE CHANNEL TEST</h1>
-        <p><strong>Маршрут:</strong><br>
-        GitHub Pages (HTTPS) ➔ Google Apps Script (HTTPS) ➔ Beget (HTTP + HMAC)</p>
+        
+        <div class="route">
+            <strong>Маршрут запроса:</strong><br>
+            🌐 GitHub Pages (HTTPS) → 🔄 Google Apps Script (HTTPS) → 🖥️ Beget Server (HTTP + HMAC)
+        </div>
         
         <p><strong>Цель:</strong> Проверка целостности и аутентичности данных без HTTPS на конечном сервере.</p>
         
@@ -32,14 +106,15 @@
         <div id="log">Ожидание команды...</div>
         
         <div class="meta">
-            <p>🔑 Ключ: <code>TEST_SECRET_KEY_2026_...</code> (замените перед продакшеном!)</p>
+            <p>🔑 Тестовый ключ: <code>TEST_SECRET_KEY_2026_...</code> <span class="warning">(замените перед продакшеном!)</span></p>
             <p>🌐 PHP Endpoint: <code>http://c93253ng.beget.tech/gate/base/test</code></p>
             <p>🔄 GAS Proxy: <code>...AKfycbyKJCKw.../exec</code></p>
+            <p class="info">💡 Совет: Откройте консоль браузера (F12) → вкладка Network для отладки.</p>
         </div>
     </div>
 
     <script>
-        // ✅ ВАШ РЕАЛЬНЫЙ URL GOOGLE APPS SCRIPT
+        // ✅ ВАШ РЕАЛЬНЫЙ URL GOOGLE APPS SCRIPT (уже вставлен)
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbyKJCKwghqQad9lWxJSr6lHoyYN_8uqg0fDy5wI3qiaywFm2948hxTXCZhLwCfZRRzY/exec';
 
         async function runTest() {
@@ -48,35 +123,37 @@
             
             btn.disabled = true;
             btn.innerText = '⏳ Отправка...';
-            log.innerHTML = '<span class="info">[Шаг 1/4] Подготовка данных...</span>\n';
+            log.innerHTML = '<span class="info">[Шаг 1/4] Генерация тестовых данных...</span>\n';
 
-            // 1. Формируем тестовые данные
+            // 1. Формируем полезные данные
             const payload = {
                 test_id: 'GH_' + Math.floor(Math.random() * 100000),
                 message: 'Secure payload from GitHub Pages',
                 client_time: new Date().toISOString(),
-                user_agent: navigator.userAgent.substring(0, 50) + '...'
+                user_agent: navigator.userAgent.substring(0, 60) + '...',
+                random_value: Math.random().toString(36).substring(2, 10)
             };
 
             await sleep(400);
-            log.innerHTML += `<span class="info">[Шаг 2/4] Отправка в Google Apps Script (HTTPS)...</span>\n`;
+            log.innerHTML += `<span class="info">[Шаг 2/4] Отправка в Google Apps Script (через HTTPS)...</span>\n`;
 
             try {
                 // 2. POST-запрос к GAS
-                // Соединение зашифровано браузером автоматически (HTTPS)
+                // ⚠️ ВАЖНО: Не указываем 'Content-Type: application/json' в заголовках,
+                // чтобы браузер НЕ отправлял OPTIONS preflight-запрос (GAS не поддерживает OPTIONS).
+                // GAS всё равно корректно обработает JSON-строку в теле запроса.
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    // Намеренно не указываем headers: { 'Content-Type': ... }
                     body: JSON.stringify(payload)
                 });
 
-                // Проверяем, что ответ пришел
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 await sleep(400);
-                log.innerHTML += `<span class="info">[Шаг 3/4] Получен ответ. Проверка структуры...</span>\n`;
+                log.innerHTML += `<span class="info">[Шаг 3/4] Получен ответ от GAS. Проверка...</span>\n`;
 
                 const result = await response.json();
 
@@ -84,18 +161,22 @@
                 
                 // 3. Анализ результата
                 if (result.status === 'success') {
-                    log.innerHTML += `<span class="success">[Шаг 4/4] ✅ УСПЕХ! Цепочка безопасна.</span>\n\n`;
-                    log.innerHTML += `<strong>Ответ от сервера Beget:</strong>\n`;
+                    log.innerHTML += `<span class="success">[Шаг 4/4] ✅ УСПЕХ! Цепочка безопасности работает.</span>\n\n`;
+                    log.innerHTML += `<strong>📦 Данные от сервера Beget:</strong>\n`;
                     log.innerHTML += JSON.stringify(result.data, null, 2);
                     
-                    // Дополнительная визуальная проверка
+                    // Визуальная проверка целостности
                     if (result.data.client_data && result.data.client_data.test_id === payload.test_id) {
-                        log.innerHTML += `\n<span class="success">✓ Данные не были изменены в пути (test_id совпадает)</span>`;
+                        log.innerHTML += `\n\n<span class="success">✓ Целостность подтверждена: test_id совпадает</span>`;
+                        log.innerHTML += `\n<span class="success">✓ Данные не были изменены в пути</span>`;
                     }
                 } else if (result.status === 'error') {
-                    log.innerHTML += `<span class="error">[Шаг 4/4] ❌ ОШИБКА ЛОГИКИ: ${result.message}</span>\n`;
-                    if (result.message.includes('signature')) {
-                        log.innerHTML += `<span class="warning">💡 Подсказка: Проверьте, что SHARED_SECRET одинаков в PHP и GAS!</span>`;
+                    log.innerHTML += `<span class="error">[Шаг 4/4] ❌ ОШИБКА: ${result.message}</span>\n`;
+                    if (result.message.toLowerCase().includes('signature')) {
+                        log.innerHTML += `\n<span class="warning">💡 Подсказка: Проверьте, что SHARED_SECRET идентичен в PHP и GAS (без пробелов!)</span>`;
+                    }
+                    if (result.message.toLowerCase().includes('expired')) {
+                        log.innerHTML += `\n<span class="warning">💡 Подсказка: Проверьте время на сервере Beget (должно быть синхронизировано)</span>`;
                     }
                 } else {
                     log.innerHTML += `<span class="error">[Шаг 4/4] ❌ НЕИЗВЕСТНЫЙ ФОРМАТ ОТВЕТА</span>\n`;
@@ -104,16 +185,18 @@
 
             } catch (e) {
                 log.innerHTML += `<span class="error">❌ СЕТЕВАЯ ОШИБКА: ${e.message}</span>\n`;
-                log.innerHTML += `<span class="warning">💡 Возможные причины:</span>
-- GAS Web App не развернут как "Доступно всем"
-- Блокировка фаерволом/антивирусом
-- Неверный URL в переменной GAS_URL`;
+                log.innerHTML += `\n<span class="warning">💡 Возможные причины:</span>
+• GAS Web App не развернут с доступом "Все (Anyone)"
+• Неверный URL в переменной GAS_URL
+• Блокировка фаерволом, антивирусом или расширением браузера
+• Сервер Beget недоступен или возвращает ошибку`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = '▶ ОТПРАВИТЬ ЗАЩИЩЕННЫЙ ЗАПРОС';
             }
         }
 
+        // Вспомогательная функция для задержки (визуальный эффект)
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
