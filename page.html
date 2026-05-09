@@ -137,10 +137,11 @@
         try {
             // Формируем полезную нагрузку
             const payload = {
-                request_type: 'get_html_page',
-                user: 'admin',
-                timestamp: Date.now()
-            };
+    test_id: 'GH_' + Math.floor(Math.random() * 100000),  // ← как ожидает PHP
+    action: 'get_html',                                    // ← как ожидает PHP
+    user: 'admin',
+    timestamp: Date.now()
+};
 
             // 🔑 ВАЖНО: Не указываем заголовок Content-Type, чтобы избежать CORS preflight (OPTIONS)
             // GAS не поддерживает OPTIONS, поэтому отправляем как "простой" POST-запрос
